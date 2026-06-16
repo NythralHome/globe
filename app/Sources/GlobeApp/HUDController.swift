@@ -3,8 +3,14 @@ import AppKit
 @MainActor
 final class HUDController {
     private var window: NSWindow?
+    private var hideWorkItem: DispatchWorkItem?
 
     func show(text: String) {
+        hideWorkItem?.cancel()
+        hideWorkItem = nil
+        window?.orderOut(nil)
+        window = nil
+
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 24, weight: .medium)
         label.textColor = .labelColor
@@ -41,9 +47,17 @@ final class HUDController {
 
         self.window = window
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
-            self?.window?.orderOut(nil)
-            self?.window = nil
+        let hideWorkItem = DispatchWorkItem { [weak self, weak window] in
+            guard let self, let window, self.window === window else {
+                return
+            }
+
+            window.orderOut(nil)
+            self.window = nil
+            self.hideWorkItem = nil
         }
+        self.hideWorkItem = hideWorkItem
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9, execute: hideWorkItem)
     }
 }
