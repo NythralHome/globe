@@ -244,13 +244,13 @@ struct OnboardingView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Open Privacy & Security") {
+                Button("Request Accessibility Access") {
                     model.beginAccessibilitySetup()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("Turn on Globe in Accessibility. If it is not listed, click + and choose Globe from Applications.")
+                Text("When macOS asks, click “Open System Settings”, then turn on Globe. If Globe is not listed, click + and choose Globe from Applications.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

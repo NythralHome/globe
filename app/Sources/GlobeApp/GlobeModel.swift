@@ -92,15 +92,12 @@ final class GlobeModel: ObservableObject {
             refreshSystemState()
             if accessibilityTrusted {
                 startKeyboardMonitor()
-            } else {
-                openAccessibilitySettings()
             }
         }
     }
 
     func beginAccessibilitySetup() {
         requestAccessibilityPermission()
-        openAccessibilitySettings()
     }
 
     func openAccessibilitySettings() {
