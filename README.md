@@ -11,6 +11,17 @@ Globe is a native menu bar app for people who type in multiple languages every d
 
 [Download beta](https://globe.nythral.com) · [Report an issue](https://github.com/NythralHome/globe/issues/new/choose) · [Project site](https://globe.nythral.com) · [Nythral](https://nythral.com)
 
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/globe-settings.png" alt="Globe settings window" width="49%">
+  <img src="docs/screenshots/globe-onboarding.png" alt="Globe welcome setup" width="49%">
+</p>
+<p>
+  <img src="docs/screenshots/globe-key-actions.png" alt="Globe key actions settings" width="49%">
+  <img src="docs/screenshots/globe-permissions.png" alt="Globe permissions settings" width="49%">
+</p>
+
 ## Status
 
 Globe is in public beta for macOS 14 or newer. The installer is signed with Developer ID, notarized by Apple, and distributed through GitHub Releases.
