@@ -185,6 +185,21 @@ struct OnboardingView: View {
                     }
                 }
 
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Test Globe key")
+                            .font(.headline)
+                        Spacer()
+                        Button("Reset") {
+                            model.resetGlobeKeyTest()
+                        }
+                    }
+                    Label(model.lastGlobeKeyTestEvent, systemImage: "keyboard")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 4)
+
                 Text("If Globe does not appear, install the app in Applications, add it with +, then relaunch Globe.")
                     .font(.callout)
                     .foregroundStyle(.secondary)

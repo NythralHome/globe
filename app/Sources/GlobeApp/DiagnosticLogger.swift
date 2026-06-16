@@ -1,7 +1,7 @@
 import Foundation
 
 enum DiagnosticLogger {
-    private static let logURL: URL = {
+    static let logURL: URL = {
         let directory = FileManager.default
             .homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/Globe", isDirectory: true)
@@ -24,5 +24,14 @@ enum DiagnosticLogger {
         } else {
             try? data.write(to: logURL)
         }
+    }
+
+    static func recentLog(maxBytes: Int = 80_000) -> String {
+        guard let data = try? Data(contentsOf: logURL) else {
+            return "No diagnostic log exists yet."
+        }
+
+        let suffix = data.count > maxBytes ? data.suffix(maxBytes) : data[...]
+        return String(decoding: suffix, as: UTF8.self)
     }
 }

@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import GlobeCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 final class GlobeModel: ObservableObject {
@@ -10,6 +11,7 @@ final class GlobeModel: ObservableObject {
     @Published private(set) var currentInputSourceName = "Unknown"
     @Published private(set) var accessibilityTrusted = false
     @Published private(set) var inputSources: [InputSource] = []
+    @Published private(set) var lastGlobeKeyTestEvent = "Press Globe/Fn to test key detection."
 
     private let settingsStore: SettingsStoring
     private let permissionManager: PermissionManaging
@@ -103,6 +105,33 @@ final class GlobeModel: ObservableObject {
 
     func reportIssue() {
         NSWorkspace.shared.open(AppLinks.issues)
+    }
+
+    func resetGlobeKeyTest() {
+        lastGlobeKeyTestEvent = "Press Globe/Fn to test key detection."
+    }
+
+    func exportDiagnostics() {
+        refreshSystemState()
+
+        let savePanel = NSSavePanel()
+        savePanel.title = "Export Globe Diagnostics"
+        savePanel.nameFieldStringValue = "Globe-Diagnostics-\(Self.diagnosticsTimestamp()).txt"
+        savePanel.allowedContentTypes = [.plainText]
+        savePanel.canCreateDirectories = true
+
+        guard savePanel.runModal() == .OK, let url = savePanel.url else {
+            return
+        }
+
+        do {
+            try diagnosticsReport().write(to: url, atomically: true, encoding: .utf8)
+            DiagnosticLogger.log("Exported diagnostics to \(url.path)")
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            DiagnosticLogger.log("Failed to export diagnostics: \(error.localizedDescription)")
+            showDiagnosticsExportError(error)
+        }
     }
 
     func checkForUpdates() {
@@ -266,6 +295,8 @@ final class GlobeModel: ObservableObject {
     }
 
     func handlePressInput(_ input: GlobePressInterpreter.Input) {
+        recordGlobeKeyTestEvent(input)
+
         guard settings.isEnabled else {
             DiagnosticLogger.log("handlePressInput ignored; Globe disabled")
             return
@@ -310,6 +341,20 @@ final class GlobeModel: ObservableObject {
         case .showInputSourcePicker:
             break
         case .none:
+            break
+        }
+    }
+
+    private func recordGlobeKeyTestEvent(_ input: GlobePressInterpreter.Input) {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+
+        switch input {
+        case let .keyDown(date):
+            lastGlobeKeyTestEvent = "Detected Globe/Fn down at \(formatter.string(from: date))."
+        case let .keyUp(date):
+            lastGlobeKeyTestEvent = "Detected Globe/Fn up at \(formatter.string(from: date))."
+        case .timer:
             break
         }
     }
@@ -472,6 +517,60 @@ final class GlobeModel: ObservableObject {
         if alert.runModal() == .alertSecondButtonReturn {
             NSWorkspace.shared.open(AppLinks.releases)
         }
+    }
+
+    private func showDiagnosticsExportError(_ error: Error) {
+        NSApplication.shared.activate()
+        let alert = NSAlert()
+        alert.messageText = "Could not export diagnostics"
+        alert.informativeText = error.localizedDescription
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    private func diagnosticsReport() -> String {
+        let inputSourceLines = inputSources
+            .map { "- \($0.localizedName) (`\($0.id)`)" }
+            .joined(separator: "\n")
+        let mapping = settings.mapping
+
+        return """
+        Globe Diagnostics
+        =================
+
+        Generated: \(ISO8601DateFormatter().string(from: Date()))
+        Globe version: \(AppVersion.displayString)
+        macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
+        Accessibility trusted: \(accessibilityTrusted)
+        Current input source: \(currentInputSourceName)
+        Launch at login: \(settings.launchAtLogin)
+        Globe enabled: \(settings.isEnabled)
+        Show menu bar icon: \(settings.showMenuBarIcon)
+        Show switching HUD: \(settings.showSwitchingHUD)
+        Multi-press timeout: \(settings.timing.multiPressTimeout)
+        Long-press duration: \(settings.timing.longPressDuration)
+
+        Mapping
+        -------
+        Single press: \(mapping.singlePress)
+        Double press: \(mapping.doublePress)
+        Triple press: \(mapping.triplePress)
+        Long press: \(mapping.longPress)
+
+        Installed input sources
+        -----------------------
+        \(inputSourceLines.isEmpty ? "No input sources detected." : inputSourceLines)
+
+        Recent Globe log
+        ----------------
+        \(DiagnosticLogger.recentLog())
+        """
+    }
+
+    private static func diagnosticsTimestamp() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+        return formatter.string(from: Date())
     }
 
     private func updateMessage(for release: ReleaseInfo) -> String {

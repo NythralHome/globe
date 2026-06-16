@@ -174,6 +174,26 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Test Globe key")
+                            .font(.headline)
+                        Spacer()
+                        Button("Reset") {
+                            model.resetGlobeKeyTest()
+                        }
+                    }
+                    Text("Press Globe/Fn. If Globe can observe the key, the status below updates immediately.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Label(model.lastGlobeKeyTestEvent, systemImage: "keyboard")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
@@ -323,6 +343,10 @@ struct SettingsView: View {
 
                         Button("Report a Problem") {
                             model.reportIssue()
+                        }
+
+                        Button("Export Diagnostics") {
+                            model.exportDiagnostics()
                         }
                     }
                 }

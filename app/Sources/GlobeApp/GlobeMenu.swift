@@ -39,6 +39,10 @@ struct GlobeMenu: View {
             model.reportIssue()
         }
 
+        Button("Export Diagnostics") {
+            model.exportDiagnostics()
+        }
+
         Button("Open Project Website") {
             model.openWebsite()
         }
