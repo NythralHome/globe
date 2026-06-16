@@ -148,14 +148,21 @@ struct SettingsView: View {
 
                 SettingsDivider()
 
-                HStack(spacing: 10) {
-                    Button("Request Permission") {
-                        model.requestAccessibilityPermission()
-                    }
-                    .buttonStyle(.borderedProminent)
+                VStack(alignment: .leading, spacing: 10) {
+                    if model.accessibilityTrusted {
+                        Text("Globe can detect the Globe/Fn key.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Button("Open Privacy & Security") {
+                            model.beginAccessibilitySetup()
+                        }
+                        .buttonStyle(.borderedProminent)
 
-                    Button("Open Accessibility Settings") {
-                        model.openAccessibilitySettings()
+                        Text("Turn on Globe in Accessibility. If it is not listed, click + and choose Globe from Applications.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }

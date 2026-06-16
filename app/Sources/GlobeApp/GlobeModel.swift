@@ -98,6 +98,11 @@ final class GlobeModel: ObservableObject {
         }
     }
 
+    func beginAccessibilitySetup() {
+        requestAccessibilityPermission()
+        openAccessibilitySettings()
+    }
+
     func openAccessibilitySettings() {
         SystemSettingsOpener.openAccessibility()
     }

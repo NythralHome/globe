@@ -166,46 +166,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
             }
         case 3:
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Label(model.accessibilityTrusted ? "Permission is enabled" : "Permission is missing", systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle")
-                        .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
-                    Spacer()
-                    Button("Refresh") {
-                        model.refreshSystemState()
-                    }
-                }
-
-                HStack {
-                    Button("Request Permission") {
-                        model.requestAccessibilityPermission()
-                    }
-                    Button("Open Accessibility Settings") {
-                        model.openAccessibilitySettings()
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Test Globe key")
-                            .font(.headline)
-                        Spacer()
-                        Button("Reset") {
-                            model.resetGlobeKeyTest()
-                        }
-                    }
-                    Label(model.lastGlobeKeyTestEvent, systemImage: "keyboard")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 4)
-
-                Text("If Globe does not appear, install the app in Applications, add it with +, then relaunch Globe.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(16)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+            permissionSetup
         case 4:
             VStack(alignment: .leading, spacing: 12) {
                 Picker("Single press", selection: sourceBinding(\.singlePress)) {
@@ -253,6 +214,7 @@ struct OnboardingView: View {
                     step += 1
                 }
                 .keyboardShortcut(.defaultAction)
+                .disabled(step == 3 && !model.accessibilityTrusted)
             } else {
                 Button("Start Using Globe") {
                     model.enableLaunchAtLogin()
@@ -266,6 +228,35 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
+    }
+
+    private var permissionSetup: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label(
+                model.accessibilityTrusted ? "Accessibility access is enabled." : "Accessibility access is required to detect Globe/Fn.",
+                systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "lock.open"
+            )
+            .font(.callout)
+            .foregroundStyle(model.accessibilityTrusted ? .green : .secondary)
+
+            if model.accessibilityTrusted {
+                Text("You can continue setting up Globe.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button("Open Privacy & Security") {
+                    model.beginAccessibilitySetup()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+
+                Text("Turn on Globe in Accessibility. If it is not listed, click + and choose Globe from Applications.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: 480, alignment: .leading)
     }
 
     private func statusPill(title: String, systemImage: String, color: Color) -> some View {
