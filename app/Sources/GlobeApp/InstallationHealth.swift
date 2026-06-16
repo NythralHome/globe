@@ -28,6 +28,7 @@ enum InstallationHealth {
 
             switch alert.runModal() {
             case .alertFirstButtonReturn:
+                AppDelegate.allowTermination()
                 NSApplication.shared.terminate(nil)
             case .alertSecondButtonReturn:
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications", isDirectory: true))

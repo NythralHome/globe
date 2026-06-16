@@ -93,6 +93,11 @@ public final class GlobePressInterpreter {
     }
 
     private func handleTimer(at date: Date) -> [Action] {
+        if let keyDownDate, date.timeIntervalSince(keyDownDate) >= timing.longPressDuration {
+            reset()
+            return [.longPress]
+        }
+
         guard let deadline, date >= deadline else {
             return []
         }

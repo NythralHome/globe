@@ -52,6 +52,16 @@ struct GlobePressInterpreterTests {
     }
 
     @Test
+    func longPressEmitsOnTimerBeforeRelease() {
+        let interpreter = GlobePressInterpreter(timing: timing)
+        let start = Date(timeIntervalSince1970: 0)
+
+        #expect(interpreter.handle(.keyDown(start)) == [])
+        #expect(interpreter.handle(.timer(start.addingTimeInterval(0.71))) == [.longPress])
+        #expect(interpreter.handle(.keyUp(start.addingTimeInterval(0.80))) == [])
+    }
+
+    @Test
     func timeoutBeforeNextPressFinalizesPreviousPress() {
         let interpreter = GlobePressInterpreter(timing: timing)
         let start = Date(timeIntervalSince1970: 0)

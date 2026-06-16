@@ -3,7 +3,6 @@ import SwiftUI
 
 struct GlobeMenu: View {
     @ObservedObject var model: GlobeModel
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         Text("Current: \(model.currentInputSourceName)")
@@ -13,8 +12,7 @@ struct GlobeMenu: View {
         Toggle("Enable Globe", isOn: enabledBinding)
 
         Button("Open Settings") {
-            NSApplication.shared.activate()
-            openSettings()
+            model.showSettingsWindow()
         }
 
         Button("Welcome & Setup") {
@@ -49,6 +47,7 @@ struct GlobeMenu: View {
             .foregroundStyle(.secondary)
 
         Button("Quit") {
+            AppDelegate.allowTermination()
             NSApplication.shared.terminate(nil)
         }
     }

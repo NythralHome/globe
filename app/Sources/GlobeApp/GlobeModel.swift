@@ -21,6 +21,8 @@ final class GlobeModel: ObservableObject {
     private var updateCheckTask: Task<Void, Never>?
     private var onboardingWindow: NSWindow?
     private var onboardingWindowDelegate: OnboardingWindowDelegate?
+    private var settingsWindow: NSWindow?
+    private var settingsWindowDelegate: SettingsWindowDelegate?
     private lazy var keyboardMonitor = KeyboardMonitor { [weak self] input in
         self?.handlePressInput(input)
     }
@@ -179,6 +181,39 @@ final class GlobeModel: ObservableObject {
         onboardingWindow = nil
     }
 
+    func showSettingsWindow() {
+        if let settingsWindow {
+            settingsWindow.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate()
+            return
+        }
+
+        let hostingController = NSHostingController(
+            rootView: SettingsView(model: self)
+                .frame(width: 780, height: 520)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 780, height: 520),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hostingController
+        window.minSize = NSSize(width: 780, height: 520)
+        window.title = "Globe Settings"
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate()
+
+        let delegate = SettingsWindowDelegate { [weak self] in
+            self?.settingsWindow = nil
+            self?.settingsWindowDelegate = nil
+        }
+        window.delegate = delegate
+        settingsWindowDelegate = delegate
+        settingsWindow = window
+    }
+
     func handlePressInput(_ input: GlobePressInterpreter.Input) {
         guard settings.isEnabled else {
             DiagnosticLogger.log("handlePressInput ignored; Globe disabled")
@@ -191,8 +226,13 @@ final class GlobeModel: ObservableObject {
             perform(settings.mapping.mapping.action(for: interpretedAction))
         }
 
-        if case .keyUp = input {
+        switch input {
+        case .keyDown:
+            scheduleLongPressTimeout()
+        case .keyUp:
             schedulePendingPressTimeout()
+        case .timer:
+            break
         }
     }
 
@@ -215,8 +255,7 @@ final class GlobeModel: ObservableObject {
                 hudController.show(text: selectedSource.localizedName)
             }
         case .openSettings:
-            NSApplication.shared.activate()
-            NSApplication.shared.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            showSettingsWindow()
         case .showInputSourcePicker:
             break
         case .none:
@@ -242,6 +281,15 @@ final class GlobeModel: ObservableObject {
     private func schedulePendingPressTimeout() {
         pendingTimer?.invalidate()
         pendingTimer = Timer.scheduledTimer(withTimeInterval: settings.timing.multiPressTimeout + 0.02, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.handlePressInput(.timer(Date()))
+            }
+        }
+    }
+
+    private func scheduleLongPressTimeout() {
+        pendingTimer?.invalidate()
+        pendingTimer = Timer.scheduledTimer(withTimeInterval: settings.timing.longPressDuration + 0.02, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 self?.handlePressInput(.timer(Date()))
             }
@@ -301,6 +349,18 @@ final class GlobeModel: ObservableObject {
 }
 
 private final class OnboardingWindowDelegate: NSObject, NSWindowDelegate {
+    private let onClose: () -> Void
+
+    init(onClose: @escaping () -> Void) {
+        self.onClose = onClose
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onClose()
+    }
+}
+
+private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
     private let onClose: () -> Void
 
     init(onClose: @escaping () -> Void) {
