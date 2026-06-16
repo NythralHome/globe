@@ -79,14 +79,14 @@ Build a beta `.dmg`:
 
 ```sh
 app/Scripts/package-beta.sh
-open app/.build/dist/Globe-0.1.0-beta.4.dmg
+open app/.build/dist/Globe-0.1.0-beta.5.dmg
 ```
 
 Build a beta `.pkg` installer:
 
 ```sh
 app/Scripts/package-pkg.sh
-open app/.build/dist/Globe-0.1.0-beta.4.pkg
+open app/.build/dist/Globe-0.1.0-beta.5.pkg
 ```
 
 To sign the `.pkg`, install a `Developer ID Installer` certificate and pass

@@ -4,10 +4,10 @@ Globe is currently distributed as a beta macOS app.
 
 ## Install
 
-1. Download `Globe-0.1.0-beta.4.dmg`.
-2. Open the disk image.
-3. Drag `Globe.app` to Applications.
-4. Open `Globe.app` from Applications.
+1. Download `Globe-0.1.0-beta.5.pkg`.
+2. Open the installer package.
+3. Complete the installer.
+4. Globe opens automatically from Applications.
 5. Complete the welcome setup.
 
 ## Required macOS Setup
