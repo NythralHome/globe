@@ -3,92 +3,267 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var model: GlobeModel
-    @State private var showsAdvancedTiming = false
+    @State private var selectedTab: SettingsTab = .general
 
     var body: some View {
-        Form {
-            Section("General") {
-                Toggle("Enable Globe", isOn: binding(\.isEnabled))
-                Toggle("Launch at Login", isOn: binding(\.launchAtLogin))
-                Toggle("Show menu bar icon", isOn: binding(\.showMenuBarIcon))
-                Toggle("Show switching HUD", isOn: binding(\.showSwitchingHUD))
+        HStack(spacing: 0) {
+            sidebar
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    tabHeader
+                    selectedContent
+                }
+                .padding(28)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(Color(nsColor: .windowBackgroundColor))
+        }
+        .onAppear {
+            model.refreshSystemState()
+        }
+    }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 10) {
+                Image(systemName: "globe")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(.blue, in: RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Globe")
+                        .font(.headline)
+                    Text(AppVersion.displayString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 4)
+
+            VStack(spacing: 4) {
+                ForEach(SettingsTab.allCases) { tab in
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: tab.systemImage)
+                                .frame(width: 18)
+                            Text(tab.title)
+                            Spacer()
+                        }
+                        .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
+                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            selectedTab == tab ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.16) : .clear,
+                            in: RoundedRectangle(cornerRadius: 8)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
-            Section("Permissions") {
+            Spacer()
+
+            permissionStatus
+        }
+        .padding(18)
+        .frame(width: 210)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private var permissionStatus: some View {
+        Label(
+            model.accessibilityTrusted ? "Accessibility enabled" : "Accessibility needed",
+            systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
+        )
+        .font(.caption)
+        .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            (model.accessibilityTrusted ? Color.green : Color.orange).opacity(0.12),
+            in: RoundedRectangle(cornerRadius: 8)
+        )
+    }
+
+    private var tabHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(selectedTab.title, systemImage: selectedTab.systemImage)
+                .font(.system(size: 24, weight: .semibold))
+            Text(selectedTab.subtitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var selectedContent: some View {
+        switch selectedTab {
+        case .general:
+            generalTab
+        case .permissions:
+            permissionsTab
+        case .actions:
+            actionsTab
+        case .advanced:
+            advancedTab
+        }
+    }
+
+    private var generalTab: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            settingsGroup {
+                SettingsToggleRow(title: "Enable Globe", isOn: binding(\.isEnabled))
+                SettingsDivider()
+                SettingsToggleRow(title: "Launch at Login", isOn: binding(\.launchAtLogin))
+                SettingsDivider()
+                SettingsToggleRow(title: "Show menu bar icon", isOn: binding(\.showMenuBarIcon))
+                SettingsDivider()
+                SettingsToggleRow(title: "Show switching HUD", isOn: binding(\.showSwitchingHUD))
+            }
+        }
+    }
+
+    private var permissionsTab: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            settingsGroup {
                 HStack {
                     Text("Accessibility")
                     Spacer()
                     Text(model.accessibilityTrusted ? "Enabled" : "Missing")
-                        .foregroundStyle(model.accessibilityTrusted ? .green : .secondary)
+                        .fontWeight(.medium)
+                        .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
                 }
+                .font(.system(size: 15))
 
-                Button("Request Accessibility Permission") {
-                    model.requestAccessibilityPermission()
-                }
+                SettingsDivider()
 
-                Button("Open Accessibility Settings") {
-                    model.openAccessibilitySettings()
-                }
-            }
+                HStack(spacing: 10) {
+                    Button("Request Permission") {
+                        model.requestAccessibilityPermission()
+                    }
+                    .buttonStyle(.borderedProminent)
 
-            Section("macOS Globe Key") {
-                Text("Disable the default macOS Globe/Fn input source shortcut for predictable direct switching.")
-                    .foregroundStyle(.secondary)
-
-                Button("Open Keyboard Settings") {
-                    model.openKeyboardSettings()
+                    Button("Open Accessibility Settings") {
+                        model.openAccessibilitySettings()
+                    }
                 }
             }
 
-            Section("Key Actions") {
-                Picker("Single press", selection: sourceBinding(\.singlePress)) {
-                    sourceOptions
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("macOS Globe Key")
+                        .font(.headline)
+                    Text("Set “Press Globe key to” to “Do Nothing” so macOS does not cycle input sources before Globe can switch directly.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button("Open Keyboard Settings") {
+                        model.openKeyboardSettings()
+                    }
+                }
+            }
+        }
+    }
+
+    private var actionsTab: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            settingsGroup {
+                SettingsPickerRow(title: "Single press") {
+                    Picker("Single press", selection: sourceBinding(\.singlePress)) {
+                        sourceOptions
+                    }
+                    .labelsHidden()
                 }
 
-                Picker("Double press", selection: sourceBinding(\.doublePress)) {
-                    sourceOptions
+                SettingsDivider()
+
+                SettingsPickerRow(title: "Double press") {
+                    Picker("Double press", selection: sourceBinding(\.doublePress)) {
+                        sourceOptions
+                    }
+                    .labelsHidden()
                 }
 
-                Picker("Triple press", selection: sourceBinding(\.triplePress)) {
-                    sourceOptions
+                SettingsDivider()
+
+                SettingsPickerRow(title: "Triple press") {
+                    Picker("Triple press", selection: sourceBinding(\.triplePress)) {
+                        sourceOptions
+                    }
+                    .labelsHidden()
                 }
 
-                Picker("Long press", selection: longPressBinding) {
-                    Text("Open settings").tag(CodableGlobePressAction.openSettings)
-                    Text("Show input source picker").tag(CodableGlobePressAction.showInputSourcePicker)
-                    Text("Do nothing").tag(CodableGlobePressAction.none)
+                SettingsDivider()
+
+                SettingsPickerRow(title: "Long press") {
+                    Picker("Long press", selection: longPressBinding) {
+                        Text("Open settings").tag(CodableGlobePressAction.openSettings)
+                        Text("Show input source picker").tag(CodableGlobePressAction.showInputSourcePicker)
+                        Text("Do nothing").tag(CodableGlobePressAction.none)
+                    }
+                    .labelsHidden()
                 }
             }
 
-            Section("Timing") {
-                DisclosureGroup("Advanced", isExpanded: $showsAdvancedTiming) {
-                    Slider(
-                        value: multiPressTimeoutBinding,
-                        in: 0.20...0.60,
-                        step: 0.05
-                    ) {
+            Button("Use Suggested Mapping") {
+                model.applyRecommendedInputSourceMapping()
+            }
+        }
+    }
+
+    private var advancedTab: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
                         Text("Multi-press timeout")
+                        Spacer()
+                        Text("\(model.settings.timing.multiPressTimeout, specifier: "%.2f")s")
+                            .foregroundStyle(.secondary)
                     }
-                    Text("\(model.settings.timing.multiPressTimeout, specifier: "%.2f") seconds")
-                        .foregroundStyle(.secondary)
+                    Slider(value: multiPressTimeoutBinding, in: 0.20...0.60, step: 0.05)
+                }
 
-                    Slider(
-                        value: longPressDurationBinding,
-                        in: 0.50...1.20,
-                        step: 0.05
-                    ) {
+                SettingsDivider()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
                         Text("Long-press duration")
+                        Spacer()
+                        Text("\(model.settings.timing.longPressDuration, specifier: "%.2f")s")
+                            .foregroundStyle(.secondary)
                     }
-                    Text("\(model.settings.timing.longPressDuration, specifier: "%.2f") seconds")
-                        .foregroundStyle(.secondary)
+                    Slider(value: longPressDurationBinding, in: 0.50...1.20, step: 0.05)
                 }
             }
+
+            settingsGroup {
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text(AppVersion.displayString)
+                        .foregroundStyle(.secondary)
+                }
+                .font(.system(size: 15))
+            }
         }
-        .formStyle(.grouped)
-        .padding()
-        .onAppear {
-            model.refreshSystemState()
-        }
+    }
+
+    private func settingsGroup<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 14, content: content)
+            .padding(18)
+            .frame(maxWidth: 560, alignment: .leading)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
     }
 
     @ViewBuilder
@@ -150,5 +325,90 @@ struct SettingsView: View {
                 model.saveSettings()
             }
         )
+    }
+}
+
+private enum SettingsTab: String, CaseIterable, Identifiable {
+    case general
+    case permissions
+    case actions
+    case advanced
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general:
+            "General"
+        case .permissions:
+            "Permissions"
+        case .actions:
+            "Key Actions"
+        case .advanced:
+            "Advanced"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .general:
+            "Core app behavior and startup options."
+        case .permissions:
+            "macOS access needed for direct Globe/Fn switching."
+        case .actions:
+            "Choose what each Globe/Fn press does."
+        case .advanced:
+            "Timing controls and build information."
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general:
+            "switch.2"
+        case .permissions:
+            "lock.shield"
+        case .actions:
+            "keyboard"
+        case .advanced:
+            "slider.horizontal.3"
+        }
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+        }
+        .font(.system(size: 15))
+    }
+}
+
+private struct SettingsPickerRow<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Text(title)
+            Spacer()
+            content
+                .frame(maxWidth: 260)
+        }
+        .font(.system(size: 15))
+    }
+}
+
+private struct SettingsDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.leading, 2)
     }
 }

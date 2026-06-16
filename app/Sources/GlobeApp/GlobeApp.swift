@@ -14,7 +14,7 @@ struct GlobeApp: App {
 
         Settings {
             SettingsView(model: model)
-                .frame(width: 560, height: 460)
+                .frame(width: 780, height: 520)
         }
     }
 }
