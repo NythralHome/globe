@@ -79,8 +79,18 @@ Build a beta `.dmg`:
 
 ```sh
 app/Scripts/package-beta.sh
-open app/.build/dist/Globe-0.1.0-beta.3.dmg
+open app/.build/dist/Globe-0.1.0-beta.4.dmg
 ```
+
+Build a beta `.pkg` installer:
+
+```sh
+app/Scripts/package-pkg.sh
+open app/.build/dist/Globe-0.1.0-beta.4.pkg
+```
+
+To sign the `.pkg`, install a `Developer ID Installer` certificate and pass
+`GLOBE_INSTALLER_SIGN_IDENTITY`.
 
 For manual Accessibility testing, copy the generated bundle into `/Applications`, add that copy in System Settings, and relaunch it:
 
