@@ -147,8 +147,7 @@ final class GlobeModel: ObservableObject {
 
     func showOnboarding() {
         if let onboardingWindow {
-            onboardingWindow.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate()
+            presentWindowCentered(onboardingWindow)
             return
         }
 
@@ -170,9 +169,7 @@ final class GlobeModel: ObservableObject {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
-        centerWindow(window)
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
+        presentWindowCentered(window)
         let delegate = OnboardingWindowDelegate { [weak self] in
             self?.onboardingWindow = nil
             self?.onboardingWindowDelegate = nil
@@ -190,8 +187,7 @@ final class GlobeModel: ObservableObject {
 
     func showSettingsWindow() {
         if let settingsWindow {
-            settingsWindow.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate()
+            presentWindowCentered(settingsWindow)
             return
         }
 
@@ -209,9 +205,7 @@ final class GlobeModel: ObservableObject {
         window.contentViewController = hostingController
         window.minSize = NSSize(width: 780, height: 520)
         window.title = "Globe Settings"
-        centerWindow(window)
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
+        presentWindowCentered(window)
 
         let delegate = SettingsWindowDelegate { [weak self] in
             self?.settingsWindow = nil
@@ -224,8 +218,7 @@ final class GlobeModel: ObservableObject {
 
     func showLaunchStatusWindow() {
         if let launchStatusWindow {
-            launchStatusWindow.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate()
+            presentWindowCentered(launchStatusWindow)
             return
         }
 
@@ -255,9 +248,7 @@ final class GlobeModel: ObservableObject {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
-        centerWindow(window)
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
+        presentWindowCentered(window)
 
         let delegate = LaunchStatusWindowDelegate { [weak self] in
             self?.launchStatusWindow = nil
@@ -356,10 +347,21 @@ final class GlobeModel: ObservableObject {
         }
     }
 
+    private func presentWindowCentered(_ window: NSWindow) {
+        centerWindow(window)
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+
+        DispatchQueue.main.async { [weak window] in
+            guard let window else { return }
+            self.centerWindow(window)
+        }
+    }
+
     private func centerWindow(_ window: NSWindow) {
-        let screen = NSApplication.shared.keyWindow?.screen
-            ?? NSApplication.shared.mainWindow?.screen
-            ?? NSScreen.main
+        window.contentView?.layoutSubtreeIfNeeded()
+
+        let screen = screenForPresentation()
         guard let visibleFrame = screen?.visibleFrame else {
             window.center()
             return
@@ -371,6 +373,17 @@ final class GlobeModel: ObservableObject {
             y: visibleFrame.midY - frame.height / 2
         )
         window.setFrameOrigin(origin)
+    }
+
+    private func screenForPresentation() -> NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        if let mouseScreen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) {
+            return mouseScreen
+        }
+
+        return NSApplication.shared.keyWindow?.screen
+            ?? NSApplication.shared.mainWindow?.screen
+            ?? NSScreen.main
     }
 
     private func showUpdateResult(_ result: UpdateCheckResult) {
