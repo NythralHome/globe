@@ -7,10 +7,11 @@ The Mac App Store path needs a separate build and review track. Apple requires M
 Current preparation status:
 
 - Bundle ID `com.nythral.globe` exists in App Store Connect.
+- App Store Connect app record exists as `Nythral Globe` with Apple ID `6781046732`.
 - A Mac App Store provisioning profile exists for `com.nythral.globe`.
 - Local Apple Distribution and Mac Installer Distribution signing identities are installed on the build Mac.
 - `app/Scripts/package-app-store.sh` builds `app/.build/app-store/Globe-0.1.0-14-mas.pkg`.
-- App Store Connect app record creation still needs the App Store Connect web UI. The API key can read/update apps, but Apple returned `CREATE` as unsupported for the `apps` resource.
+- `Globe-0.1.0-14-mas.pkg` was validated and uploaded successfully through `altool`; delivery UUID `427c91d3-8150-410f-a994-bc92975231c8` returned `build-status: VALID`.
 
 ## Main Risk
 
@@ -36,7 +37,7 @@ Decision gate:
 
 ## Metadata Checklist
 
-- App name: `Globe`
+- App Store listing name: `Nythral Globe` (`Globe` was unavailable in App Store Connect).
 - Subtitle: direct Globe/Fn input source switching.
 - Description: native macOS menu bar utility for people who type in multiple languages.
 - Privacy: no typed text is recorded, stored, or transmitted.
