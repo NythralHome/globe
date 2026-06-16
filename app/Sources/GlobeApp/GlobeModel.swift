@@ -79,9 +79,23 @@ final class GlobeModel: ObservableObject {
     }
 
     func requestAccessibilityPermission() {
-        permissionManager.requestAccessibilityPermission()
+        let isTrusted = permissionManager.requestAccessibilityPermission()
+        if !isTrusted {
+            keyboardMonitor.start()
+        }
         refreshSystemState()
         startKeyboardMonitor()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self else { return }
+
+            refreshSystemState()
+            if accessibilityTrusted {
+                startKeyboardMonitor()
+            } else {
+                openAccessibilitySettings()
+            }
+        }
     }
 
     func openAccessibilitySettings() {

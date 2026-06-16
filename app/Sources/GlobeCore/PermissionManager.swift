@@ -3,7 +3,8 @@ import Foundation
 
 public protocol PermissionManaging {
     var isAccessibilityTrusted: Bool { get }
-    func requestAccessibilityPermission()
+    @discardableResult
+    func requestAccessibilityPermission() -> Bool
 }
 
 public final class PermissionManager: PermissionManaging {
@@ -13,11 +14,12 @@ public final class PermissionManager: PermissionManaging {
         AXIsProcessTrusted()
     }
 
-    public func requestAccessibilityPermission() {
+    @discardableResult
+    public func requestAccessibilityPermission() -> Bool {
         let options = [
             "AXTrustedCheckOptionPrompt": true
         ] as CFDictionary
 
-        AXIsProcessTrustedWithOptions(options)
+        return AXIsProcessTrustedWithOptions(options)
     }
 }
