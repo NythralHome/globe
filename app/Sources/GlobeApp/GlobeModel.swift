@@ -97,7 +97,11 @@ final class GlobeModel: ObservableObject {
     }
 
     func beginAccessibilitySetup() {
-        requestAccessibilityPermission()
+        openAccessibilitySettings()
+    }
+
+    func revealAppInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
     }
 
     func openAccessibilitySettings() {

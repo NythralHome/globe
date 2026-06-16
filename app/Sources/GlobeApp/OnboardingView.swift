@@ -244,16 +244,21 @@ struct OnboardingView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Request Accessibility Access") {
+                Button("Open Accessibility Settings") {
                     model.beginAccessibilitySetup()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("When macOS asks, click “Open System Settings”, then turn on Globe. If Globe is not listed, click + and choose Globe from Applications.")
+                Text("Click +, choose Globe from Applications, then turn it on. macOS does not allow Globe to add or enable itself automatically.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                Button("Show Globe in Finder") {
+                    model.revealAppInFinder()
+                }
+                .buttonStyle(.link)
             }
         }
         .frame(maxWidth: 480, alignment: .leading)
