@@ -19,6 +19,7 @@ final class GlobeModel: ObservableObject {
     private var pressInterpreter: GlobePressInterpreter
     private var pendingTimer: Timer?
     private var updateCheckTask: Task<Void, Never>?
+    private var updateDownloadTask: Task<Void, Never>?
     private var onboardingWindow: NSWindow?
     private var onboardingWindowDelegate: OnboardingWindowDelegate?
     private var settingsWindow: NSWindow?
@@ -308,16 +309,67 @@ final class GlobeModel: ObservableObject {
         case let .updateAvailable(release):
             alert.messageText = "A new Globe version is available"
             alert.informativeText = updateMessage(for: release)
-            alert.addButton(withTitle: "Download")
+            alert.addButton(withTitle: release.installerAsset == nil ? "Open Releases" : "Download Installer")
             alert.addButton(withTitle: "Later")
 
             if alert.runModal() == .alertFirstButtonReturn {
-                NSWorkspace.shared.open(release.htmlURL)
+                downloadAndOpenUpdateInstaller(from: release)
             }
             return
         }
 
         alert.runModal()
+    }
+
+    private func downloadAndOpenUpdateInstaller(from release: ReleaseInfo) {
+        guard release.installerAsset != nil else {
+            NSWorkspace.shared.open(release.htmlURL)
+            return
+        }
+
+        updateDownloadTask?.cancel()
+        updateDownloadTask = Task { [weak self] in
+            do {
+                let installerURL = try await UpdateChecker.downloadInstaller(from: release)
+                await MainActor.run {
+                    self?.showDownloadedInstaller(installerURL)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.showUpdateDownloadError(error, fallbackURL: release.htmlURL)
+                }
+            }
+        }
+    }
+
+    private func showDownloadedInstaller(_ installerURL: URL) {
+        NSApplication.shared.activate()
+        let alert = NSAlert()
+        alert.messageText = "Globe installer downloaded"
+        alert.informativeText = """
+        The signed installer was saved to Downloads.
+
+        Open it now to install the update. After installation, Globe will restart from Applications.
+        """
+        alert.addButton(withTitle: "Open Installer")
+        alert.addButton(withTitle: "Later")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(installerURL)
+        }
+    }
+
+    private func showUpdateDownloadError(_ error: Error, fallbackURL: URL) {
+        NSApplication.shared.activate()
+        let alert = NSAlert()
+        alert.messageText = "Could not download update"
+        alert.informativeText = "Globe could not download the signed installer. You can still open the GitHub release page.\n\n\(error.localizedDescription)"
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Open Release")
+
+        if alert.runModal() == .alertSecondButtonReturn {
+            NSWorkspace.shared.open(fallbackURL)
+        }
     }
 
     private func showUpdateError(_ error: Error) {
@@ -344,7 +396,7 @@ final class GlobeModel: ObservableObject {
             return "Installed: \(AppVersion.versionString)\nAvailable: \(title)\n\nWhat's new:\n\(body)"
         }
 
-        return "Installed: \(AppVersion.versionString)\nAvailable: \(title)\n\nOpen GitHub Releases to download the signed installer."
+        return "Installed: \(AppVersion.versionString)\nAvailable: \(title)\n\nDownload the signed installer to update Globe."
     }
 }
 

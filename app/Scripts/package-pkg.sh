@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.10}"
+VERSION="${GLOBE_VERSION:-0.1.0-beta.11}"
 BUILD_DIR="$APP_DIR/.build"
 BUNDLE_DIR="$BUILD_DIR/bundles/Globe.app"
 DIST_DIR="$BUILD_DIR/dist"
@@ -27,6 +27,10 @@ CONSOLE_USER="$(/usr/bin/stat -f %Su /dev/console 2>/dev/null || true)"
 if [ -d "$APP_PATH" ] && [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
   USER_ID="$(/usr/bin/id -u "$CONSOLE_USER" 2>/dev/null || true)"
   if [ -n "$USER_ID" ]; then
+    /bin/launchctl asuser "$USER_ID" /usr/bin/osascript -e 'tell application id "dev.nythral.globe" to quit' >/dev/null 2>&1 || true
+    /bin/sleep 1
+    /usr/bin/pkill -x Globe >/dev/null 2>&1 || true
+    /bin/sleep 1
     /bin/launchctl asuser "$USER_ID" /usr/bin/open "$APP_PATH" >/dev/null 2>&1 || true
   fi
 fi
