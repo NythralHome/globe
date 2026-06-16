@@ -79,7 +79,7 @@ Build a beta `.dmg`:
 
 ```sh
 app/Scripts/package-beta.sh
-open app/.build/dist/Globe-0.1.0-beta.dmg
+open app/.build/dist/Globe-0.1.0-beta.1.dmg
 ```
 
 For manual Accessibility testing, copy the generated bundle into `/Applications`, add that copy in System Settings, and relaunch it:

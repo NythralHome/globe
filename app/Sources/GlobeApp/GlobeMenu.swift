@@ -33,6 +33,9 @@ struct GlobeMenu: View {
 
         Divider()
 
+        Text("Globe \(AppVersion.displayString)")
+            .foregroundStyle(.secondary)
+
         Button("Quit") {
             NSApplication.shared.terminate(nil)
         }
