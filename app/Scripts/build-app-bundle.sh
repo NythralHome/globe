@@ -50,4 +50,6 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
+codesign --force --deep --sign - --identifier dev.nythral.globe "$BUNDLE_DIR" >/dev/null
+
 echo "$BUNDLE_DIR"

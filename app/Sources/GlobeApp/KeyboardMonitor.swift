@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import GlobeCore
+import Carbon.HIToolbox
 
 final class KeyboardMonitor: @unchecked Sendable {
     private var eventTap: CFMachPort?
@@ -14,11 +15,21 @@ final class KeyboardMonitor: @unchecked Sendable {
 
     func start() {
         guard eventTap == nil else {
+            DiagnosticLogger.log("KeyboardMonitor.start ignored; event tap already exists")
             return
         }
 
+        DiagnosticLogger.log("KeyboardMonitor.start")
         let mask = (1 << CGEventType.flagsChanged.rawValue)
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
+            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                if let refcon {
+                    let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(refcon).takeUnretainedValue()
+                    monitor.enableEventTap()
+                }
+                return Unmanaged.passUnretained(event)
+            }
+
             guard let refcon else {
                 return Unmanaged.passUnretained(event)
             }
@@ -33,13 +44,14 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
+            tap: .cghidEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
             eventsOfInterest: CGEventMask(mask),
             callback: callback,
             userInfo: refcon
         ) else {
+            DiagnosticLogger.log("KeyboardMonitor.start failed; CGEvent.tapCreate returned nil")
             return
         }
 
@@ -51,9 +63,11 @@ final class KeyboardMonitor: @unchecked Sendable {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        DiagnosticLogger.log("KeyboardMonitor.start created HID event tap")
     }
 
     func stop() {
+        DiagnosticLogger.log("KeyboardMonitor.stop")
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
@@ -66,12 +80,24 @@ final class KeyboardMonitor: @unchecked Sendable {
         eventTap = nil
     }
 
+    private func enableEventTap() {
+        guard let eventTap else {
+            return
+        }
+
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+        DiagnosticLogger.log("KeyboardMonitor re-enabled event tap")
+    }
+
     private func handle(type: CGEventType, event: CGEvent) -> Bool {
         guard type == .flagsChanged else {
             return false
         }
 
         let hasFunctionFlag = event.flags.contains(.maskSecondaryFn)
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        DiagnosticLogger.log("flagsChanged keyCode=\(keyCode) flags=\(event.flags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
+
         guard hasFunctionFlag != isFunctionKeyPressed else {
             return false
         }
@@ -80,6 +106,7 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         let now = Date()
         let input: GlobePressInterpreter.Input = hasFunctionFlag ? .keyDown(now) : .keyUp(now)
+        DiagnosticLogger.log("KeyboardMonitor interpreted \(hasFunctionFlag ? "keyDown" : "keyUp")")
         let handler = handler
 
         DispatchQueue.main.async {

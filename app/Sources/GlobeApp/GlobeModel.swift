@@ -34,6 +34,7 @@ final class GlobeModel: ObservableObject {
         self.settings = settings
         self.pressInterpreter = GlobePressInterpreter(timing: settings.timing)
 
+        DiagnosticLogger.log("GlobeModel.init enabled=\(settings.isEnabled) timing=\(settings.timing)")
         refreshSystemState()
         startKeyboardMonitor()
     }
@@ -55,6 +56,7 @@ final class GlobeModel: ObservableObject {
         inputSources = inputSourceManager.availableInputSources()
         currentInputSourceName = inputSourceManager.currentInputSource()?.localizedName ?? "Unknown"
         settings.launchAtLogin = launchAtLoginManager.isEnabled
+        DiagnosticLogger.log("refreshSystemState accessibilityTrusted=\(accessibilityTrusted) current=\(currentInputSourceName) sources=\(inputSources.map(\.localizedName).joined(separator: ","))")
     }
 
     func requestAccessibilityPermission() {
@@ -72,10 +74,12 @@ final class GlobeModel: ObservableObject {
 
     func handlePressInput(_ input: GlobePressInterpreter.Input) {
         guard settings.isEnabled else {
+            DiagnosticLogger.log("handlePressInput ignored; Globe disabled")
             return
         }
 
         let interpretedActions = pressInterpreter.handle(input)
+        DiagnosticLogger.log("handlePressInput input=\(input) actions=\(interpretedActions)")
         for interpretedAction in interpretedActions {
             perform(settings.mapping.mapping.action(for: interpretedAction))
         }
@@ -89,10 +93,16 @@ final class GlobeModel: ObservableObject {
         switch action {
         case let .inputSource(id):
             guard let selectedSource = inputSources.first(where: { $0.id == id }) else {
+                DiagnosticLogger.log("perform inputSource failed; source not found id=\(id)")
                 return
             }
 
-            try? inputSourceManager.selectInputSource(id: id)
+            do {
+                try inputSourceManager.selectInputSource(id: id)
+                DiagnosticLogger.log("perform inputSource selected id=\(id) name=\(selectedSource.localizedName)")
+            } catch {
+                DiagnosticLogger.log("perform inputSource failed id=\(id) error=\(error)")
+            }
             refreshSystemState()
             if settings.showSwitchingHUD {
                 hudController.show(text: selectedSource.localizedName)

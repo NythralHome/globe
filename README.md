@@ -73,6 +73,15 @@ open app/.build/bundles/Globe.app
 
 The generated bundle is local build output and is not committed.
 
+For manual Accessibility testing, copy the generated bundle into `/Applications`, add that copy in System Settings, and relaunch it:
+
+```sh
+cp -R app/.build/bundles/Globe.app /Applications/Globe.app
+open /Applications/Globe.app
+```
+
+macOS may not grant a stable Accessibility identity to an ad-hoc app launched directly from `.build`.
+
 ## Roadmap
 
 - Global Globe/Fn event tap
