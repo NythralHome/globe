@@ -20,7 +20,9 @@ Globe is in early development. The current repository contains the initial Swift
 
 ## Installation
 
-Prebuilt releases are not available yet. During development, build and run the app from the Swift package in `app/`.
+Globe is currently available as a beta build. See [docs/BETA.md](docs/BETA.md) for beta installation and setup.
+
+During development, build and run the app from the Swift package in `app/`.
 
 ```sh
 cd app
@@ -72,6 +74,13 @@ open app/.build/bundles/Globe.app
 ```
 
 The generated bundle is local build output and is not committed.
+
+Build a beta `.dmg`:
+
+```sh
+app/Scripts/package-beta.sh
+open app/.build/dist/Globe-0.1.0-beta.dmg
+```
 
 For manual Accessibility testing, copy the generated bundle into `/Applications`, add that copy in System Settings, and relaunch it:
 

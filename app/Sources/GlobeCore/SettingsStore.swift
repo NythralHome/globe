@@ -5,6 +5,7 @@ public struct GlobeSettings: Codable, Equatable, Sendable {
     public var launchAtLogin: Bool
     public var showMenuBarIcon: Bool
     public var showSwitchingHUD: Bool
+    public var hasCompletedOnboarding: Bool
     public var timing: GlobePressTiming
     public var mapping: CodableGlobeActionMapping
 
@@ -13,6 +14,7 @@ public struct GlobeSettings: Codable, Equatable, Sendable {
         launchAtLogin: Bool = false,
         showMenuBarIcon: Bool = true,
         showSwitchingHUD: Bool = true,
+        hasCompletedOnboarding: Bool = false,
         timing: GlobePressTiming = GlobePressTiming(),
         mapping: CodableGlobeActionMapping = CodableGlobeActionMapping()
     ) {
@@ -20,8 +22,32 @@ public struct GlobeSettings: Codable, Equatable, Sendable {
         self.launchAtLogin = launchAtLogin
         self.showMenuBarIcon = showMenuBarIcon
         self.showSwitchingHUD = showSwitchingHUD
+        self.hasCompletedOnboarding = hasCompletedOnboarding
         self.timing = timing
         self.mapping = mapping
+    }
+}
+
+extension GlobeSettings {
+    private enum CodingKeys: String, CodingKey {
+        case isEnabled
+        case launchAtLogin
+        case showMenuBarIcon
+        case showSwitchingHUD
+        case hasCompletedOnboarding
+        case timing
+        case mapping
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
+        showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
+        showSwitchingHUD = try container.decodeIfPresent(Bool.self, forKey: .showSwitchingHUD) ?? true
+        hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        timing = try container.decodeIfPresent(GlobePressTiming.self, forKey: .timing) ?? GlobePressTiming()
+        mapping = try container.decodeIfPresent(CodableGlobeActionMapping.self, forKey: .mapping) ?? CodableGlobeActionMapping()
     }
 }
 

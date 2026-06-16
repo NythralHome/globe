@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import Foundation
 import GlobeCore
+import SwiftUI
 
 @MainActor
 final class GlobeModel: ObservableObject {
@@ -17,6 +18,8 @@ final class GlobeModel: ObservableObject {
     private let launchAtLoginManager = LaunchAtLoginManager()
     private var pressInterpreter: GlobePressInterpreter
     private var pendingTimer: Timer?
+    private var onboardingWindow: NSWindow?
+    private var onboardingWindowDelegate: OnboardingWindowDelegate?
     private lazy var keyboardMonitor = KeyboardMonitor { [weak self] input in
         self?.handlePressInput(input)
     }
@@ -37,6 +40,12 @@ final class GlobeModel: ObservableObject {
         DiagnosticLogger.log("GlobeModel.init enabled=\(settings.isEnabled) timing=\(settings.timing)")
         refreshSystemState()
         startKeyboardMonitor()
+
+        if !settings.hasCompletedOnboarding {
+            DispatchQueue.main.async { [weak self] in
+                self?.showOnboarding()
+            }
+        }
     }
 
     func saveSettings() {
@@ -70,6 +79,69 @@ final class GlobeModel: ObservableObject {
 
     func openKeyboardSettings() {
         SystemSettingsOpener.openKeyboard()
+    }
+
+    func enableLaunchAtLogin() {
+        settings.launchAtLogin = true
+        saveSettings()
+        refreshSystemState()
+    }
+
+    func completeOnboarding() {
+        settings.hasCompletedOnboarding = true
+        settings.isEnabled = true
+        settingsStore.save(settings)
+        startKeyboardMonitor()
+    }
+
+    func applyRecommendedInputSourceMapping() {
+        let sources = inputSources
+        settings.mapping.singlePress = sources[safe: 0].map { .inputSource(id: $0.id) } ?? .none
+        settings.mapping.doublePress = sources[safe: 1].map { .inputSource(id: $0.id) } ?? .none
+        settings.mapping.triplePress = sources[safe: 2].map { .inputSource(id: $0.id) } ?? .none
+        settings.mapping.longPress = .openSettings
+        saveSettings()
+    }
+
+    func showOnboarding() {
+        if let onboardingWindow {
+            onboardingWindow.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate()
+            return
+        }
+
+        let hostingController = NSHostingController(
+            rootView: OnboardingView(model: self)
+                .frame(width: 820, height: 540)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 820, height: 540),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hostingController
+        window.minSize = NSSize(width: 820, height: 540)
+        window.maxSize = NSSize(width: 820, height: 540)
+        window.title = "Welcome to Globe"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate()
+        let delegate = OnboardingWindowDelegate { [weak self] in
+            self?.onboardingWindow = nil
+            self?.onboardingWindowDelegate = nil
+        }
+        window.delegate = delegate
+        onboardingWindowDelegate = delegate
+        onboardingWindow = window
+    }
+
+    func closeOnboarding() {
+        onboardingWindow?.close()
+        onboardingWindow = nil
     }
 
     func handlePressInput(_ input: GlobePressInterpreter.Input) {
@@ -139,5 +211,23 @@ final class GlobeModel: ObservableObject {
                 self?.handlePressInput(.timer(Date()))
             }
         }
+    }
+}
+
+private final class OnboardingWindowDelegate: NSObject, NSWindowDelegate {
+    private let onClose: () -> Void
+
+    init(onClose: @escaping () -> Void) {
+        self.onClose = onClose
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onClose()
+    }
+}
+
+private extension Array {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

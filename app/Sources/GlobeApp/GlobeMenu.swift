@@ -17,6 +17,10 @@ struct GlobeMenu: View {
             openSettings()
         }
 
+        Button("Welcome & Setup") {
+            model.showOnboarding()
+        }
+
         Button("Check Accessibility Permission") {
             model.requestAccessibilityPermission()
         }
