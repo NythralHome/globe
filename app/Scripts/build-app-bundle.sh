@@ -86,6 +86,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <string>Globe needs Accessibility permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>
 PLIST
