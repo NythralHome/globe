@@ -24,6 +24,8 @@ final class GlobeModel: ObservableObject {
     private var onboardingWindowDelegate: OnboardingWindowDelegate?
     private var settingsWindow: NSWindow?
     private var settingsWindowDelegate: SettingsWindowDelegate?
+    private var launchStatusWindow: NSWindow?
+    private var launchStatusWindowDelegate: LaunchStatusWindowDelegate?
     private lazy var keyboardMonitor = KeyboardMonitor { [weak self] input in
         self?.handlePressInput(input)
     }
@@ -45,8 +47,10 @@ final class GlobeModel: ObservableObject {
         refreshSystemState()
         startKeyboardMonitor()
 
-        if !settings.hasCompletedOnboarding {
-            DispatchQueue.main.async { [weak self] in
+        DispatchQueue.main.async { [weak self] in
+            if settings.hasCompletedOnboarding {
+                self?.showLaunchStatusWindow()
+            } else {
                 self?.showOnboarding()
             }
         }
@@ -158,6 +162,7 @@ final class GlobeModel: ObservableObject {
             backing: .buffered,
             defer: false
         )
+        window.isReleasedWhenClosed = false
         window.contentViewController = hostingController
         window.minSize = NSSize(width: 820, height: 540)
         window.maxSize = NSSize(width: 820, height: 540)
@@ -165,7 +170,7 @@ final class GlobeModel: ObservableObject {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
-        window.center()
+        centerWindow(window)
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
         let delegate = OnboardingWindowDelegate { [weak self] in
@@ -178,8 +183,9 @@ final class GlobeModel: ObservableObject {
     }
 
     func closeOnboarding() {
-        onboardingWindow?.close()
+        onboardingWindow?.orderOut(nil)
         onboardingWindow = nil
+        onboardingWindowDelegate = nil
     }
 
     func showSettingsWindow() {
@@ -199,10 +205,11 @@ final class GlobeModel: ObservableObject {
             backing: .buffered,
             defer: false
         )
+        window.isReleasedWhenClosed = false
         window.contentViewController = hostingController
         window.minSize = NSSize(width: 780, height: 520)
         window.title = "Globe Settings"
-        window.center()
+        centerWindow(window)
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
 
@@ -213,6 +220,58 @@ final class GlobeModel: ObservableObject {
         window.delegate = delegate
         settingsWindowDelegate = delegate
         settingsWindow = window
+    }
+
+    func showLaunchStatusWindow() {
+        if let launchStatusWindow {
+            launchStatusWindow.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate()
+            return
+        }
+
+        let hostingController = NSHostingController(
+            rootView: LaunchStatusView(
+                openSettings: { [weak self] in
+                    self?.closeLaunchStatusWindow()
+                    self?.showSettingsWindow()
+                },
+                close: { [weak self] in
+                    self?.closeLaunchStatusWindow()
+                }
+            )
+            .frame(width: 460, height: 250)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 250),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentViewController = hostingController
+        window.minSize = NSSize(width: 460, height: 250)
+        window.maxSize = NSSize(width: 460, height: 250)
+        window.title = "Globe is Running"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        centerWindow(window)
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate()
+
+        let delegate = LaunchStatusWindowDelegate { [weak self] in
+            self?.launchStatusWindow = nil
+            self?.launchStatusWindowDelegate = nil
+        }
+        window.delegate = delegate
+        launchStatusWindowDelegate = delegate
+        launchStatusWindow = window
+    }
+
+    private func closeLaunchStatusWindow() {
+        launchStatusWindow?.orderOut(nil)
+        launchStatusWindow = nil
+        launchStatusWindowDelegate = nil
     }
 
     func handlePressInput(_ input: GlobePressInterpreter.Input) {
@@ -295,6 +354,23 @@ final class GlobeModel: ObservableObject {
                 self?.handlePressInput(.timer(Date()))
             }
         }
+    }
+
+    private func centerWindow(_ window: NSWindow) {
+        let screen = NSApplication.shared.keyWindow?.screen
+            ?? NSApplication.shared.mainWindow?.screen
+            ?? NSScreen.main
+        guard let visibleFrame = screen?.visibleFrame else {
+            window.center()
+            return
+        }
+
+        let frame = window.frame
+        let origin = NSPoint(
+            x: visibleFrame.midX - frame.width / 2,
+            y: visibleFrame.midY - frame.height / 2
+        )
+        window.setFrameOrigin(origin)
     }
 
     private func showUpdateResult(_ result: UpdateCheckResult) {
@@ -401,26 +477,50 @@ final class GlobeModel: ObservableObject {
 }
 
 private final class OnboardingWindowDelegate: NSObject, NSWindowDelegate {
-    private let onClose: () -> Void
+    private let onClose: @MainActor () -> Void
 
-    init(onClose: @escaping () -> Void) {
+    init(onClose: @escaping @MainActor () -> Void) {
         self.onClose = onClose
     }
 
-    func windowWillClose(_ notification: Notification) {
-        onClose()
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        Task { @MainActor [onClose] in
+            onClose()
+        }
+        return false
     }
 }
 
 private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
-    private let onClose: () -> Void
+    private let onClose: @MainActor () -> Void
 
-    init(onClose: @escaping () -> Void) {
+    init(onClose: @escaping @MainActor () -> Void) {
         self.onClose = onClose
     }
 
-    func windowWillClose(_ notification: Notification) {
-        onClose()
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        Task { @MainActor [onClose] in
+            onClose()
+        }
+        return false
+    }
+}
+
+private final class LaunchStatusWindowDelegate: NSObject, NSWindowDelegate {
+    private let onClose: @MainActor () -> Void
+
+    init(onClose: @escaping @MainActor () -> Void) {
+        self.onClose = onClose
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        Task { @MainActor [onClose] in
+            onClose()
+        }
+        return false
     }
 }
 

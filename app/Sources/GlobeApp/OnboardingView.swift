@@ -243,6 +243,7 @@ struct OnboardingView: View {
                     model.enableLaunchAtLogin()
                     model.completeOnboarding()
                     model.closeOnboarding()
+                    model.showLaunchStatusWindow()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)

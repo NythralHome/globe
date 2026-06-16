@@ -11,10 +11,5 @@ struct GlobeApp: App {
             GlobeMenu(model: model)
         }
         .menuBarExtraStyle(.menu)
-
-        Settings {
-            SettingsView(model: model)
-                .frame(width: 780, height: 520)
-        }
     }
 }
