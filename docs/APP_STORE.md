@@ -21,7 +21,8 @@ Decision gate:
 - Disable direct GitHub installer downloads in the App Store build. The update UI can show release notes, but installation should route through the App Store.
 - Test first-run onboarding, Accessibility permission request, launch at login, and Globe/Fn detection in a sandboxed local build.
 - Submit an internal TestFlight build and retest on a clean Mac user account.
-- Add a public privacy policy URL.
+- Add a public privacy policy URL: `https://globe.nythral.com/privacy`.
+- Use the App Store build flag: `GLOBE_DISTRIBUTION=app-store`.
 - Add complete App Store metadata, screenshots, support URL, marketing URL, age rating, and review notes.
 - Include App Review notes explaining why Accessibility permission is requested and that Globe does not record typed text.
 
@@ -31,10 +32,22 @@ Decision gate:
 - Subtitle: direct Globe/Fn input source switching.
 - Description: native macOS menu bar utility for people who type in multiple languages.
 - Privacy: no typed text is recorded, stored, or transmitted.
+- Privacy policy URL: `https://globe.nythral.com/privacy`
 - Support URL: GitHub Issues or a Globe support page.
 - Marketing URL: `https://globe.nythral.com`
 - Screenshots: welcome setup, settings tabs, key actions, permissions, and menu bar behavior.
 - Review notes: include setup steps for `Press Globe key to: Do Nothing` and Accessibility permission.
+
+## Local App Store Build Probe
+
+Build a sandboxed local bundle:
+
+```sh
+cd app
+GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0-beta.14 Scripts/build-app-bundle.sh
+```
+
+The local probe uses ad-hoc signing unless `GLOBE_CODESIGN_IDENTITY` is set. It verifies that the app can be built with App Sandbox entitlements and the `GLOBE_APP_STORE` compile flag. A real App Store upload still needs Apple distribution signing through App Store Connect/Xcode tooling.
 
 ## Suggested Review Notes
 

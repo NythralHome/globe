@@ -5,14 +5,39 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION="${GLOBE_VERSION:-0.1.0-beta.14}"
 BUILD_NUMBER="${GLOBE_BUILD:-1}"
+DISPLAY_NAME="${GLOBE_DISPLAY_NAME:-Globe}"
+DISTRIBUTION="${GLOBE_DISTRIBUTION:-developer-id}"
+BUNDLE_ID="${GLOBE_BUNDLE_ID:-dev.nythral.globe}"
 BUNDLE_DIR="$APP_DIR/.build/bundles/Globe.app"
 CONTENTS_DIR="$BUNDLE_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 SIGN_IDENTITY="${GLOBE_CODESIGN_IDENTITY:--}"
+ENTITLEMENTS=()
+SWIFT_FLAGS=()
+
+if [[ "$DISTRIBUTION" == "app-store" ]]; then
+    BUNDLE_ID="${GLOBE_BUNDLE_ID:-com.nythral.globe}"
+    ENTITLEMENTS=(--entitlements "$APP_DIR/Entitlements/AppStore.entitlements")
+    SWIFT_FLAGS=(-Xswiftc -DGLOBE_APP_STORE)
+fi
+
+CODESIGN_FLAGS=(--force --deep --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID")
+
+if [[ "$SIGN_IDENTITY" != "-" ]]; then
+    CODESIGN_FLAGS+=(--timestamp)
+fi
+
+if [[ "$DISTRIBUTION" != "app-store" ]]; then
+    CODESIGN_FLAGS+=(--options runtime)
+fi
 
 cd "$APP_DIR"
-swift build -c release
+SWIFT_BUILD_COMMAND=(swift build -c release)
+if [[ ${#SWIFT_FLAGS[@]} -gt 0 ]]; then
+    SWIFT_BUILD_COMMAND+=("${SWIFT_FLAGS[@]}")
+fi
+"${SWIFT_BUILD_COMMAND[@]}"
 "$SCRIPT_DIR/render-assets.swift"
 
 rm -rf "$BUNDLE_DIR"
@@ -29,17 +54,17 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>Globe</string>
+    <string>$DISPLAY_NAME</string>
     <key>CFBundleExecutable</key>
     <string>Globe</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.nythral.globe</string>
+    <string>$BUNDLE_ID</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Globe</string>
+    <string>$DISPLAY_NAME</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -58,6 +83,11 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --deep --timestamp --options runtime --sign "$SIGN_IDENTITY" --identifier dev.nythral.globe "$BUNDLE_DIR" >/dev/null
+CODESIGN_COMMAND=(codesign "${CODESIGN_FLAGS[@]}")
+if [[ ${#ENTITLEMENTS[@]} -gt 0 ]]; then
+    CODESIGN_COMMAND+=("${ENTITLEMENTS[@]}")
+fi
+CODESIGN_COMMAND+=("$BUNDLE_DIR")
+"${CODESIGN_COMMAND[@]}" >/dev/null
 
 echo "$BUNDLE_DIR"

@@ -330,7 +330,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Updates")
                         .font(.headline)
-                    Text("Globe checks GitHub Releases on demand and shows what's new before you download a signed installer.")
+                    Text(updateDescription)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -359,6 +359,14 @@ struct SettingsView: View {
             .padding(18)
             .frame(maxWidth: 560, alignment: .leading)
             .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var updateDescription: String {
+        if AppDistribution.isAppStore {
+            return "This build of Globe is updated by the Mac App Store. Use Check for Updates to open the App Store updates page."
+        }
+
+        return "Globe checks GitHub Releases on demand and shows what's new before you download a signed installer."
     }
 
     @ViewBuilder

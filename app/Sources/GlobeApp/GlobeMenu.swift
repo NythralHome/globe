@@ -19,7 +19,7 @@ struct GlobeMenu: View {
             model.showOnboarding()
         }
 
-        Button("Check for Updates") {
+        Button(AppDistribution.isAppStore ? "Open App Store Updates" : "Check for Updates") {
             model.checkForUpdates()
         }
 

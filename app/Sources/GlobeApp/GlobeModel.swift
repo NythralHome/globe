@@ -135,6 +135,11 @@ final class GlobeModel: ObservableObject {
     }
 
     func checkForUpdates() {
+        if AppDistribution.isAppStore {
+            showAppStoreUpdateInformation()
+            return
+        }
+
         updateCheckTask?.cancel()
         updateCheckTask = Task { [weak self] in
             do {
@@ -453,6 +458,19 @@ final class GlobeModel: ObservableObject {
         }
 
         alert.runModal()
+    }
+
+    private func showAppStoreUpdateInformation() {
+        NSApplication.shared.activate()
+        let alert = NSAlert()
+        alert.messageText = "Globe updates through the Mac App Store"
+        alert.informativeText = "This build of Globe is installed and updated by the Mac App Store. Open the App Store to check for updates."
+        alert.addButton(withTitle: "Open App Store")
+        alert.addButton(withTitle: "OK")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(URL(string: "macappstore://showUpdatesPage")!)
+        }
     }
 
     private func downloadAndOpenUpdateInstaller(from release: ReleaseInfo) {
