@@ -4,6 +4,14 @@ Globe is currently ready for Developer ID distribution outside the Mac App Store
 
 The Mac App Store path needs a separate build and review track. Apple requires Mac App Store apps to be sandboxed, submitted as app bundles through App Store Connect/Xcode tooling, and updated by the App Store rather than by a third-party installer.
 
+Current preparation status:
+
+- Bundle ID `com.nythral.globe` exists in App Store Connect.
+- A Mac App Store provisioning profile exists for `com.nythral.globe`.
+- Local Apple Distribution and Mac Installer Distribution signing identities are installed on the build Mac.
+- `app/Scripts/package-app-store.sh` builds `app/.build/app-store/Globe-0.1.0-14-mas.pkg`.
+- App Store Connect app record creation still needs the App Store Connect web UI. The API key can read/update apps, but Apple returned `CREATE` as unsupported for the `apps` resource.
+
 ## Main Risk
 
 Globe's core feature depends on observing the Globe/Fn key globally and requesting Accessibility permission. Before submitting to App Review, we need to prove that the same behavior works in a sandboxed App Store/TestFlight build.
@@ -44,10 +52,25 @@ Build a sandboxed local bundle:
 
 ```sh
 cd app
-GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0-beta.14 Scripts/build-app-bundle.sh
+GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=14 Scripts/build-app-bundle.sh
 ```
 
 The local probe uses ad-hoc signing unless `GLOBE_CODESIGN_IDENTITY` is set. It verifies that the app can be built with App Sandbox entitlements and the `GLOBE_APP_STORE` compile flag. A real App Store upload still needs Apple distribution signing through App Store Connect/Xcode tooling.
+
+Build a Mac App Store upload package when Apple Distribution, Mac Installer Distribution, and a Mac App Store provisioning profile are installed locally:
+
+```sh
+cd app
+Scripts/package-app-store.sh
+```
+
+The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=14`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`.
+
+Expected package path:
+
+```text
+app/.build/app-store/Globe-0.1.0-14-mas.pkg
+```
 
 ## Suggested Review Notes
 

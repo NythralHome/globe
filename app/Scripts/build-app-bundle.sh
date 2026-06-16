@@ -13,6 +13,7 @@ CONTENTS_DIR="$BUNDLE_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 SIGN_IDENTITY="${GLOBE_CODESIGN_IDENTITY:--}"
+PROVISIONING_PROFILE="${GLOBE_PROVISIONING_PROFILE:-}"
 ENTITLEMENTS=()
 SWIFT_FLAGS=()
 
@@ -45,6 +46,10 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$APP_DIR/.build/release/Globe" "$MACOS_DIR/Globe"
 cp "$APP_DIR/.build/assets/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
+
+if [[ -n "$PROVISIONING_PROFILE" ]]; then
+    cp "$PROVISIONING_PROFILE" "$CONTENTS_DIR/embedded.provisionprofile"
+fi
 
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
