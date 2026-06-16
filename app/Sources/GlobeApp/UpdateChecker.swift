@@ -1,4 +1,5 @@
 import Foundation
+import GlobeCore
 
 struct ReleaseInfo: Decodable {
     let tagName: String
@@ -32,20 +33,27 @@ enum UpdateChecker {
         }
 
         let releases = try JSONDecoder().decode([ReleaseInfo].self, from: data)
-        guard let latestRelease = releases.first(where: { !$0.draft }) else {
+        guard let latestRelease = releases
+            .filter({ !$0.draft })
+            .compactMap({ release -> (ReleaseInfo, GlobeVersion)? in
+                guard let version = GlobeVersion(release.tagName) else {
+                    return nil
+                }
+                return (release, version)
+            })
+            .max(by: { $0.1 < $1.1 })
+        else {
             throw URLError(.resourceUnavailable)
         }
 
-        if normalized(latestRelease.tagName) == normalized(AppVersion.versionString) {
-            return .upToDate(latestRelease)
+        guard let installedVersion = GlobeVersion(AppVersion.versionString) else {
+            return .upToDate(latestRelease.0)
         }
 
-        return .updateAvailable(latestRelease)
-    }
+        if latestRelease.1 > installedVersion {
+            return .updateAvailable(latestRelease.0)
+        }
 
-    private static func normalized(_ version: String) -> String {
-        version
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "^v", with: "", options: .regularExpression)
+        return .upToDate(latestRelease.0)
     }
 }
