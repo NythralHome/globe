@@ -18,6 +18,7 @@ final class GlobeModel: ObservableObject {
     private let launchAtLoginManager = LaunchAtLoginManager()
     private var pressInterpreter: GlobePressInterpreter
     private var pendingTimer: Timer?
+    private var updateCheckTask: Task<Void, Never>?
     private var onboardingWindow: NSWindow?
     private var onboardingWindowDelegate: OnboardingWindowDelegate?
     private lazy var keyboardMonitor = KeyboardMonitor { [weak self] input in
@@ -79,6 +80,40 @@ final class GlobeModel: ObservableObject {
 
     func openKeyboardSettings() {
         SystemSettingsOpener.openKeyboard()
+    }
+
+    func openWebsite() {
+        NSWorkspace.shared.open(AppLinks.website)
+    }
+
+    func openAuthorWebsite() {
+        NSWorkspace.shared.open(AppLinks.authorWebsite)
+    }
+
+    func openRepository() {
+        NSWorkspace.shared.open(AppLinks.repository)
+    }
+
+    func reportIssue() {
+        NSWorkspace.shared.open(AppLinks.issues)
+    }
+
+    func checkForUpdates() {
+        updateCheckTask?.cancel()
+        updateCheckTask = Task { [weak self] in
+            do {
+                let result = try await UpdateChecker.check()
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self?.showUpdateResult(result)
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self?.showUpdateError(error)
+                }
+            }
+        }
     }
 
     func enableLaunchAtLogin() {
@@ -211,6 +246,57 @@ final class GlobeModel: ObservableObject {
                 self?.handlePressInput(.timer(Date()))
             }
         }
+    }
+
+    private func showUpdateResult(_ result: UpdateCheckResult) {
+        NSApplication.shared.activate()
+        let alert = NSAlert()
+
+        switch result {
+        case let .upToDate(release):
+            alert.messageText = "Globe is up to date"
+            alert.informativeText = "You are running \(AppVersion.versionString). Latest release: \(release.tagName)."
+            alert.addButton(withTitle: "OK")
+        case let .updateAvailable(release):
+            alert.messageText = "A new Globe version is available"
+            alert.informativeText = updateMessage(for: release)
+            alert.addButton(withTitle: "Download")
+            alert.addButton(withTitle: "Later")
+
+            if alert.runModal() == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(release.htmlURL)
+            }
+            return
+        }
+
+        alert.runModal()
+    }
+
+    private func showUpdateError(_ error: Error) {
+        NSApplication.shared.activate()
+        let alert = NSAlert()
+        alert.messageText = "Could not check for updates"
+        alert.informativeText = "Globe could not reach GitHub Releases. Check your connection and try again.\n\n\(error.localizedDescription)"
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Open Releases")
+
+        if alert.runModal() == .alertSecondButtonReturn {
+            NSWorkspace.shared.open(AppLinks.releases)
+        }
+    }
+
+    private func updateMessage(for release: ReleaseInfo) -> String {
+        let title = release.name ?? release.tagName
+        let body = release.body?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "\n", maxSplits: 8)
+            .joined(separator: "\n")
+
+        if let body, !body.isEmpty {
+            return "Installed: \(AppVersion.versionString)\nAvailable: \(title)\n\nWhat's new:\n\(body)"
+        }
+
+        return "Installed: \(AppVersion.versionString)\nAvailable: \(title)\n\nOpen GitHub Releases to download the signed installer."
     }
 }
 

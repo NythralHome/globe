@@ -115,6 +115,8 @@ struct SettingsView: View {
             actionsTab
         case .advanced:
             advancedTab
+        case .about:
+            aboutTab
         }
     }
 
@@ -259,6 +261,75 @@ struct SettingsView: View {
         }
     }
 
+    private var aboutTab: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            settingsGroup {
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 62, height: 62)
+                        .background(.blue, in: RoundedRectangle(cornerRadius: 14))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Globe")
+                            .font(.title2.weight(.semibold))
+                        Text("Version \(AppVersion.displayString)")
+                            .foregroundStyle(.secondary)
+                        Text("Open-source macOS utility under the MIT License.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Developed by Nythral")
+                        .font(.headline)
+                    Text("Globe is built in public for people who switch input sources many times a day. It does not record typed text.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 10) {
+                        Button("Nythral Website") {
+                            model.openAuthorWebsite()
+                        }
+                        Button("Project Website") {
+                            model.openWebsite()
+                        }
+                        Button("Source Code") {
+                            model.openRepository()
+                        }
+                    }
+                }
+            }
+
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Updates")
+                        .font(.headline)
+                    Text("Globe checks GitHub Releases on demand and shows what's new before you download a signed installer.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 10) {
+                        Button("Check for Updates") {
+                            model.checkForUpdates()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button("Report a Problem") {
+                            model.reportIssue()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private func settingsGroup<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 14, content: content)
             .padding(18)
@@ -333,6 +404,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case permissions
     case actions
     case advanced
+    case about
 
     var id: String { rawValue }
 
@@ -346,6 +418,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
             "Key Actions"
         case .advanced:
             "Advanced"
+        case .about:
+            "About"
         }
     }
 
@@ -359,6 +433,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
             "Choose what each Globe/Fn press does."
         case .advanced:
             "Timing controls and build information."
+        case .about:
+            "Version, author, source, support, and updates."
         }
     }
 
@@ -372,6 +448,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
             "keyboard"
         case .advanced:
             "slider.horizontal.3"
+        case .about:
+            "info.circle"
         }
     }
 }

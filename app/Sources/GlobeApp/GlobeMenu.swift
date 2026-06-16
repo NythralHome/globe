@@ -21,6 +21,10 @@ struct GlobeMenu: View {
             model.showOnboarding()
         }
 
+        Button("Check for Updates") {
+            model.checkForUpdates()
+        }
+
         Button("Check Accessibility Permission") {
             model.requestAccessibilityPermission()
         }
@@ -32,6 +36,14 @@ struct GlobeMenu: View {
         Toggle("Launch at Login", isOn: launchAtLoginBinding)
 
         Divider()
+
+        Button("Report a Problem") {
+            model.reportIssue()
+        }
+
+        Button("Open Project Website") {
+            model.openWebsite()
+        }
 
         Text("Globe \(AppVersion.displayString)")
             .foregroundStyle(.secondary)

@@ -1,17 +1,19 @@
 import Foundation
 
 enum AppVersion {
+    static var versionString: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development"
+    }
+
     static var displayString: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let version = versionString
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
 
-        switch (version, build) {
-        case let (.some(version), .some(build)):
+        switch build {
+        case let .some(build):
             return "\(version) (\(build))"
-        case let (.some(version), .none):
+        case .none:
             return version
-        default:
-            return "Development"
         }
     }
 }
