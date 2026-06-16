@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$APP_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.2}"
+VERSION="${GLOBE_VERSION:-0.1.0-beta.3}"
 BUILD_DIR="$APP_DIR/.build"
 BUNDLE_DIR="$BUILD_DIR/bundles/Globe.app"
 DIST_DIR="$BUILD_DIR/dist"
@@ -79,6 +79,10 @@ sync
 hdiutil detach "$MOUNT_DIR" >/dev/null
 hdiutil convert "$RW_DMG_PATH" -format UDZO -imagekey zlib-level=9 -o "$DMG_PATH" >/dev/null
 rm -f "$RW_DMG_PATH"
+
+if [[ "${GLOBE_CODESIGN_IDENTITY:--}" != "-" ]]; then
+  codesign --force --timestamp --sign "$GLOBE_CODESIGN_IDENTITY" "$DMG_PATH" >/dev/null
+fi
 
 if [[ "${GLOBE_NOTARIZE:-0}" == "1" ]]; then
   if [[ -z "${GLOBE_NOTARY_PROFILE:-}" ]]; then
