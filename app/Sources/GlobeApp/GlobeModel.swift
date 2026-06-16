@@ -81,6 +81,7 @@ final class GlobeModel: ObservableObject {
     func requestAccessibilityPermission() {
         permissionManager.requestAccessibilityPermission()
         refreshSystemState()
+        startKeyboardMonitor()
     }
 
     func openAccessibilitySettings() {
@@ -366,6 +367,11 @@ final class GlobeModel: ObservableObject {
 
     private func startKeyboardMonitor() {
         guard settings.isEnabled else {
+            return
+        }
+
+        guard accessibilityTrusted else {
+            DiagnosticLogger.log("KeyboardMonitor.start skipped; Accessibility permission is missing")
             return
         }
 
