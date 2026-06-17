@@ -10,7 +10,7 @@ Current preparation status:
 - App Store Connect app record exists as `Nythral Globe` with Apple ID `6781046732`.
 - A Mac App Store provisioning profile exists for `com.nythral.globe`.
 - Local Apple Distribution and Mac Installer Distribution signing identities are installed on the build Mac.
-- `app/Scripts/package-app-store.sh` builds `app/.build/app-store/Globe-0.1.0-33-mas.pkg`.
+- `app/Scripts/package-app-store.sh` builds `app/.build/app-store/Globe-0.1.0-34-mas.pkg`.
 - `Globe-0.1.0-14-mas.pkg` was validated and uploaded successfully through `altool`; delivery UUID `427c91d3-8150-410f-a994-bc92975231c8` returned `build-status: VALID`.
 
 ## Main Risk
@@ -53,7 +53,7 @@ Build a sandboxed local bundle:
 
 ```sh
 cd app
-GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=33 Scripts/build-app-bundle.sh
+GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=34 Scripts/build-app-bundle.sh
 ```
 
 The local probe uses ad-hoc signing unless `GLOBE_CODESIGN_IDENTITY` is set. It verifies that the app can be built with App Sandbox entitlements and the `GLOBE_APP_STORE` compile flag. A real App Store upload still needs Apple distribution signing through App Store Connect/Xcode tooling.
@@ -65,12 +65,12 @@ cd app
 Scripts/package-app-store.sh
 ```
 
-The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=33`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`. The generated `Info.plist` includes `ITSAppUsesNonExemptEncryption=false` so App Store Connect can detect export compliance automatically.
+The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=34`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`. The generated `Info.plist` includes `ITSAppUsesNonExemptEncryption=false` so App Store Connect can detect export compliance automatically.
 
 Expected package path:
 
 ```text
-app/.build/app-store/Globe-0.1.0-33-mas.pkg
+app/.build/app-store/Globe-0.1.0-34-mas.pkg
 ```
 
 ## Suggested Review Notes
