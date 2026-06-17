@@ -1,3 +1,4 @@
+import AppKit
 import GlobeCore
 import SwiftUI
 
@@ -22,6 +23,9 @@ struct SettingsView: View {
             .background(Color(nsColor: .windowBackgroundColor))
         }
         .onAppear {
+            model.refreshSystemState()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refreshSystemState()
         }
     }
@@ -154,20 +158,26 @@ struct SettingsView: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
-                        Button("Request Input Monitoring") {
+                        Button("Open Input Monitoring Settings") {
                             model.beginAccessibilitySetup()
                         }
                         .buttonStyle(.borderedProminent)
 
-                        Text("When macOS asks, open System Settings and turn on Globe in Input Monitoring. If it is not listed, click + and choose Globe from Applications.")
+                        Text("In Input Monitoring, click +, choose Globe from Applications, and turn it on. macOS may require restarting Globe before the new permission is visible here.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Button("Show Globe in Finder") {
-                            model.revealAppInFinder()
+                        HStack(spacing: 12) {
+                            Button("Restart Globe") {
+                                model.restartApp()
+                            }
+
+                            Button("Show Globe in Finder") {
+                                model.revealAppInFinder()
+                            }
+                            .buttonStyle(.link)
                         }
-                        .buttonStyle(.link)
                     }
                 }
             }

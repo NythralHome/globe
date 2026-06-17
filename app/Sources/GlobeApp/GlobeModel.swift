@@ -97,7 +97,8 @@ final class GlobeModel: ObservableObject {
     }
 
     func beginAccessibilitySetup() {
-        requestAccessibilityPermission()
+        openAccessibilitySettings()
+        refreshSystemState()
     }
 
     func revealAppInFinder() {
@@ -106,6 +107,22 @@ final class GlobeModel: ObservableObject {
 
     func openAccessibilitySettings() {
         SystemSettingsOpener.openAccessibility()
+    }
+
+    func restartApp() {
+        let bundleURL = Bundle.main.bundleURL
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", bundleURL.path]
+
+        do {
+            try process.run()
+            AppDelegate.allowTermination()
+            NSApplication.shared.terminate(nil)
+        } catch {
+            DiagnosticLogger.log("Failed to restart Globe: \(error.localizedDescription)")
+            refreshSystemState()
+        }
     }
 
     func openKeyboardSettings() {
