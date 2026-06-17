@@ -244,7 +244,7 @@ struct OnboardingView: View {
             .foregroundStyle(model.accessibilityTrusted ? .green : .secondary)
 
             if model.accessibilityTrusted {
-                Text("You can continue setting up Globe.")
+                Text("Globe can detect the Globe/Fn key. You can continue even if System Settings does not visibly list Globe.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -254,7 +254,7 @@ struct OnboardingView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("macOS should add Globe to Input Monitoring after this request. If it does not appear, quit and reopen Globe, then request again. As a fallback, add Globe with + from Applications.")
+                Text("After the request, Globe checks macOS directly. If the status changes to enabled, setup is complete. If it stays missing, quit and reopen Globe, then request again.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

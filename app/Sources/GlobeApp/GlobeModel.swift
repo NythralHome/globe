@@ -80,16 +80,19 @@ final class GlobeModel: ObservableObject {
 
     func requestAccessibilityPermission() {
         let isTrusted = permissionManager.requestAccessibilityPermission()
+        DiagnosticLogger.log("requestAccessibilityPermission returned=\(isTrusted)")
         if !isTrusted {
             keyboardMonitor.start()
         }
         refreshSystemState()
+        DiagnosticLogger.log("requestAccessibilityPermission afterRefresh accessibilityTrusted=\(accessibilityTrusted)")
         startKeyboardMonitor()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self else { return }
 
             refreshSystemState()
+            DiagnosticLogger.log("requestAccessibilityPermission delayedRefresh accessibilityTrusted=\(accessibilityTrusted)")
             if accessibilityTrusted {
                 startKeyboardMonitor()
             }

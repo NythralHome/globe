@@ -154,7 +154,7 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     if model.accessibilityTrusted {
-                        Text("Globe can detect the Globe/Fn key.")
+                        Text("Globe can detect the Globe/Fn key. You are ready even if System Settings does not visibly list Globe.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
@@ -163,7 +163,7 @@ struct SettingsView: View {
                         }
                         .buttonStyle(.borderedProminent)
 
-                        Text("macOS should add Globe to Input Monitoring after this request. If it does not appear, quit and reopen Globe, then request again. As a fallback, add Globe with + from Applications.")
+                        Text("After the request, Globe checks macOS directly. If the status changes to Enabled, setup is complete. If it stays Missing, quit and reopen Globe, then request again.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
