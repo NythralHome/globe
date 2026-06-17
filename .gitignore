@@ -9,3 +9,4 @@ DerivedData/
 *.xcuserstate
 *.xcuserdata/
 signing-private/
+app/Entitlements/AppStore.entitlements

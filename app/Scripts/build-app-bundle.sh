@@ -17,9 +17,72 @@ PROVISIONING_PROFILE="${GLOBE_PROVISIONING_PROFILE:-}"
 ENTITLEMENTS=()
 SWIFT_FLAGS=()
 
+extract_profile_value() {
+    local profile_plist="$1"
+    local plist_path="$2"
+    /usr/libexec/PlistBuddy -c "Print $plist_path" "$profile_plist" 2>/dev/null || true
+}
+
+write_app_store_entitlements() {
+    local output_path="$1"
+    local team_id="${GLOBE_TEAM_ID:-}"
+    local app_identifier="${GLOBE_APPLICATION_IDENTIFIER:-}"
+    local keychain_group="${GLOBE_KEYCHAIN_GROUP:-}"
+
+    if [[ -n "$PROVISIONING_PROFILE" && -f "$PROVISIONING_PROFILE" ]]; then
+        local profile_plist
+        profile_plist="$(mktemp)"
+        security cms -D -i "$PROVISIONING_PROFILE" > "$profile_plist"
+        team_id="${team_id:-$(extract_profile_value "$profile_plist" ":TeamIdentifier:0")}"
+        app_identifier="${app_identifier:-$(extract_profile_value "$profile_plist" ":Entitlements:com.apple.application-identifier")}"
+        keychain_group="${keychain_group:-$(extract_profile_value "$profile_plist" ":Entitlements:keychain-access-groups:0")}"
+        rm -f "$profile_plist"
+    fi
+
+    mkdir -p "$(dirname "$output_path")"
+    {
+        cat <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+PLIST
+        if [[ -n "$app_identifier" ]]; then
+            cat <<PLIST
+    <key>com.apple.application-identifier</key>
+    <string>$app_identifier</string>
+PLIST
+        fi
+        if [[ -n "$team_id" ]]; then
+            cat <<PLIST
+    <key>com.apple.developer.team-identifier</key>
+    <string>$team_id</string>
+PLIST
+        fi
+        cat <<PLIST
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+PLIST
+        if [[ -n "$keychain_group" ]]; then
+            cat <<PLIST
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$keychain_group</string>
+    </array>
+PLIST
+        fi
+        cat <<PLIST
+</dict>
+</plist>
+PLIST
+    } > "$output_path"
+}
+
 if [[ "$DISTRIBUTION" == "app-store" ]]; then
     BUNDLE_ID="${GLOBE_BUNDLE_ID:-com.nythral.globe}"
-    ENTITLEMENTS=(--entitlements "$APP_DIR/Entitlements/AppStore.entitlements")
+    GENERATED_ENTITLEMENTS="$APP_DIR/.build/generated/AppStore.entitlements"
+    write_app_store_entitlements "$GENERATED_ENTITLEMENTS"
+    ENTITLEMENTS=(--entitlements "$GENERATED_ENTITLEMENTS")
     SWIFT_FLAGS=(-Xswiftc -DGLOBE_APP_STORE)
 fi
 

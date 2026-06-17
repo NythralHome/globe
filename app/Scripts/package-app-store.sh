@@ -9,12 +9,53 @@ DIST_DIR="$APP_DIR/.build/app-store"
 PKG_PATH="$DIST_DIR/Globe-$VERSION-$BUILD_NUMBER-mas.pkg"
 STAGING_DIR="${TMPDIR:-/tmp}/globe-mas-package"
 STAGED_APP="$STAGING_DIR/Globe.app"
-APP_SIGN_IDENTITY="${GLOBE_CODESIGN_IDENTITY:-Apple Distribution: Sergey Plagov (V989445HKJ)}"
-INSTALLER_SIGN_IDENTITY="${GLOBE_INSTALLER_SIGN_IDENTITY:-3rd Party Mac Developer Installer: Sergey Plagov (V989445HKJ)}"
 PROVISIONING_PROFILE="${GLOBE_PROVISIONING_PROFILE:-$APP_DIR/../signing-private/Globe-Mac-App-Store-2026.mobileprovision}"
+
+profile_value() {
+    local profile_plist="$1"
+    local plist_path="$2"
+    /usr/libexec/PlistBuddy -c "Print $plist_path" "$profile_plist" 2>/dev/null || true
+}
+
+find_identity() {
+    local prefix="$1"
+    local team_id="$2"
+    security find-identity -v | awk -v prefix="$prefix" -v team_id="$team_id" '
+        index($0, "\"" prefix) && index($0, "(" team_id ")") {
+            identity = $0
+            sub(/^[^"]*"/, "", identity)
+            sub(/"[^"]*$/, "", identity)
+            print identity
+            exit
+        }
+    '
+}
 
 if [[ ! -f "$PROVISIONING_PROFILE" ]]; then
     echo "Missing provisioning profile: $PROVISIONING_PROFILE" >&2
+    exit 1
+fi
+
+PROFILE_PLIST="$(mktemp)"
+security cms -D -i "$PROVISIONING_PROFILE" > "$PROFILE_PLIST"
+TEAM_ID="$(profile_value "$PROFILE_PLIST" ":TeamIdentifier:0")"
+rm -f "$PROFILE_PLIST"
+
+if [[ -z "$TEAM_ID" ]]; then
+    echo "Could not read TeamIdentifier from provisioning profile." >&2
+    exit 1
+fi
+
+APP_SIGN_IDENTITY="${GLOBE_CODESIGN_IDENTITY:-$(find_identity "Apple Distribution:" "$TEAM_ID")}"
+INSTALLER_SIGN_IDENTITY="${GLOBE_INSTALLER_SIGN_IDENTITY:-$(find_identity "3rd Party Mac Developer Installer:" "$TEAM_ID")}"
+
+if [[ -z "$APP_SIGN_IDENTITY" ]]; then
+    echo "Missing Apple Distribution signing identity for team $TEAM_ID." >&2
+    exit 1
+fi
+
+if [[ -z "$INSTALLER_SIGN_IDENTITY" ]]; then
+    echo "Missing 3rd Party Mac Developer Installer signing identity for team $TEAM_ID." >&2
     exit 1
 fi
 
