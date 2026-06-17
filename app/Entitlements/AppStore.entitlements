@@ -8,8 +8,6 @@
     <string>V989445HKJ</string>
     <key>com.apple.security.app-sandbox</key>
     <true/>
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
     <key>keychain-access-groups</key>
     <array>
         <string>V989445HKJ.*</string>
