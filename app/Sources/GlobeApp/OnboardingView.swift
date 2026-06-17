@@ -248,13 +248,13 @@ struct OnboardingView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Open Input Monitoring") {
+                Button("Request Input Monitoring") {
                     model.beginAccessibilitySetup()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("macOS does not add App Store apps to this list automatically. In Input Monitoring, click +, choose Globe from Applications, turn it on, then restart Globe.")
+                Text("macOS should add Globe to Input Monitoring after this request. If it does not appear, quit and reopen Globe, then request again. As a fallback, add Globe with + from Applications.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

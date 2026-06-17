@@ -97,8 +97,7 @@ final class GlobeModel: ObservableObject {
     }
 
     func beginAccessibilitySetup() {
-        openAccessibilitySettings()
-        refreshSystemState()
+        requestAccessibilityPermission()
     }
 
     func revealAppInFinder() {
