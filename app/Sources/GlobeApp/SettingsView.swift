@@ -158,12 +158,12 @@ struct SettingsView: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
-                        Button("Open Input Monitoring Settings") {
+                        Button("Open Input Monitoring") {
                             model.beginAccessibilitySetup()
                         }
                         .buttonStyle(.borderedProminent)
 
-                        Text("In Input Monitoring, click +, choose Globe from Applications, and turn it on. macOS may require restarting Globe before the new permission is visible here.")
+                        Text("macOS does not add App Store apps to this list automatically. In Input Monitoring, click +, choose Globe from Applications, turn it on, then restart Globe.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

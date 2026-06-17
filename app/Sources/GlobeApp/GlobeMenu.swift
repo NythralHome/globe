@@ -23,7 +23,7 @@ struct GlobeMenu: View {
             model.checkForUpdates()
         }
 
-        Button("Open Input Monitoring Settings") {
+        Button("Open Input Monitoring") {
             model.beginAccessibilitySetup()
         }
 
