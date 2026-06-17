@@ -83,7 +83,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>Globe needs Accessibility permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>
+    <string>Globe needs Input Monitoring permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>ITSAppUsesNonExemptEncryption</key>

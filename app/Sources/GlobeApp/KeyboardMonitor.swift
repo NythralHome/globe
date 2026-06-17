@@ -35,9 +35,7 @@ final class KeyboardMonitor: @unchecked Sendable {
             }
 
             let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(refcon).takeUnretainedValue()
-            if monitor.handle(type: type, event: event) {
-                return nil
-            }
+            _ = monitor.handle(type: type, event: event)
 
             return Unmanaged.passUnretained(event)
         }
@@ -46,7 +44,7 @@ final class KeyboardMonitor: @unchecked Sendable {
         guard let tap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
-            options: .defaultTap,
+            options: .listenOnly,
             eventsOfInterest: CGEventMask(mask),
             callback: callback,
             userInfo: refcon

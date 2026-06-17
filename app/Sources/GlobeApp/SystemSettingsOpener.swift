@@ -3,7 +3,7 @@ import Foundation
 
 enum SystemSettingsOpener {
     static func openAccessibility() {
-        open("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        open("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
     }
 
     static func openKeyboard() {

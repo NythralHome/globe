@@ -1,4 +1,4 @@
-import ApplicationServices
+import CoreGraphics
 import Foundation
 
 public protocol PermissionManaging {
@@ -11,15 +11,11 @@ public final class PermissionManager: PermissionManaging {
     public init() {}
 
     public var isAccessibilityTrusted: Bool {
-        AXIsProcessTrusted()
+        CGPreflightListenEventAccess()
     }
 
     @discardableResult
     public func requestAccessibilityPermission() -> Bool {
-        let options = [
-            "AXTrustedCheckOptionPrompt": true
-        ] as CFDictionary
-
-        return AXIsProcessTrustedWithOptions(options)
+        CGRequestListenEventAccess()
     }
 }

@@ -80,7 +80,7 @@ struct SettingsView: View {
 
     private var permissionStatus: some View {
         Label(
-            model.accessibilityTrusted ? "Accessibility enabled" : "Accessibility needed",
+            model.accessibilityTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
             systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
         )
         .font(.caption)
@@ -138,7 +138,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 18) {
             settingsGroup {
                 HStack {
-                    Text("Accessibility")
+                    Text("Input Monitoring")
                     Spacer()
                     Text(model.accessibilityTrusted ? "Enabled" : "Missing")
                         .fontWeight(.medium)
@@ -154,12 +154,12 @@ struct SettingsView: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
-                        Button("Open Accessibility Settings") {
+                        Button("Request Input Monitoring") {
                             model.beginAccessibilitySetup()
                         }
                         .buttonStyle(.borderedProminent)
 
-                        Text("Click +, choose Globe from Applications, then turn it on. macOS does not allow Globe to add or enable itself automatically.")
+                        Text("When macOS asks, open System Settings and turn on Globe in Input Monitoring. If it is not listed, click + and choose Globe from Applications.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

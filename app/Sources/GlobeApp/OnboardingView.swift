@@ -27,8 +27,8 @@ struct OnboardingView: View {
         OnboardingStep(
             icon: "checkmark.seal",
             title: "Permissions",
-            subtitle: "Allow Accessibility access.",
-            body: "macOS requires Accessibility permission for global keyboard control events. Add Globe from Applications and enable it."
+            subtitle: "Allow Input Monitoring.",
+            body: "macOS requires Input Monitoring permission for apps that listen for global keyboard control events. Globe uses it only to detect Globe/Fn."
         ),
         OnboardingStep(
             icon: "keyboard",
@@ -110,7 +110,7 @@ struct OnboardingView: View {
             Spacer()
 
             statusPill(
-                title: model.accessibilityTrusted ? "Accessibility enabled" : "Accessibility needed",
+                title: model.accessibilityTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
                 systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle",
                 color: model.accessibilityTrusted ? .green : .orange
             )
@@ -233,7 +233,7 @@ struct OnboardingView: View {
     private var permissionSetup: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(
-                model.accessibilityTrusted ? "Accessibility access is enabled." : "Accessibility access is required to detect Globe/Fn.",
+                model.accessibilityTrusted ? "Input Monitoring is enabled." : "Input Monitoring is required to detect Globe/Fn.",
                 systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "lock.open"
             )
             .font(.callout)
@@ -244,13 +244,13 @@ struct OnboardingView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Open Accessibility Settings") {
+                Button("Request Input Monitoring") {
                     model.beginAccessibilitySetup()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("Click +, choose Globe from Applications, then turn it on. macOS does not allow Globe to add or enable itself automatically.")
+                Text("When macOS asks, open System Settings and turn on Globe in Input Monitoring. If it is not listed, click + and choose Globe from Applications.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
