@@ -80,8 +80,16 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <string>14.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
+PLIST
+
+if [[ "$DISTRIBUTION" != "app-store" ]]; then
+    cat >> "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>LSUIElement</key>
     <true/>
+PLIST
+fi
+
+cat >> "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>NSAccessibilityUsageDescription</key>
     <string>Globe needs Input Monitoring permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>
     <key>NSHighResolutionCapable</key>
