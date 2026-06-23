@@ -123,7 +123,7 @@ open app/.build/bundles/Globe.app
 Build a signed PKG when Developer ID identities are installed locally:
 
 ```sh
-GLOBE_VERSION=0.1.0-beta.18 \
+GLOBE_VERSION=0.1.0-beta.19 \
 GLOBE_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 GLOBE_INSTALLER_SIGN_IDENTITY="Developer ID Installer: Your Name (TEAMID)" \
 app/Scripts/package-pkg.sh

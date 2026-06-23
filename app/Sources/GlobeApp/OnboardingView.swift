@@ -300,14 +300,14 @@ struct OnboardingView: View {
         #else
         VStack(alignment: .leading, spacing: 14) {
             Label(
-                model.accessibilityTrusted ? "Input Monitoring is enabled." : "Input Monitoring is required to detect Globe/Fn.",
+                model.accessibilityTrusted ? "Fn/Globe monitoring is ready." : "Input Monitoring is required to detect Globe/Fn.",
                 systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "lock.open"
             )
             .font(.callout)
             .foregroundStyle(model.accessibilityTrusted ? .green : .secondary)
 
             if model.accessibilityTrusted {
-                Text("Globe can detect the Globe/Fn key. You can continue even if System Settings does not visibly list Globe.")
+                Text("Globe can create the global listen-only keyboard event tap used for Fn/Globe switching. Continue and test Fn outside Globe focus.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -317,7 +317,7 @@ struct OnboardingView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("Globe asks macOS for access automatically. After Globe appears in Input Monitoring, turn it on and restart Globe. macOS usually does not apply this permission to an already running app.")
+                Text("Globe asks macOS for access automatically. After Globe appears in Input Monitoring, turn it on and restart Globe. If it still says Needed, remove and add Globe again in System Settings.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -159,9 +159,9 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 18) {
             settingsGroup {
                 HStack {
-                    Text("Input Monitoring")
+                    Text("Fn/Globe monitoring")
                     Spacer()
-                    Text(model.accessibilityTrusted ? "Enabled" : "Missing")
+                    Text(model.accessibilityTrusted ? "Ready" : "Needed")
                         .fontWeight(.medium)
                         .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
                 }
@@ -171,7 +171,7 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     if model.accessibilityTrusted {
-                        Text("Globe can detect the Globe/Fn key. You are ready even if System Settings does not visibly list Globe.")
+                        Text("Globe can create the global listen-only keyboard event tap used for Fn/Globe switching. Test Fn below to confirm it works outside Globe focus.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
@@ -180,7 +180,7 @@ struct SettingsView: View {
                         }
                         .buttonStyle(.borderedProminent)
 
-                        Text("Globe asks macOS for access automatically. After Globe appears in Input Monitoring, turn it on and restart Globe. macOS usually does not apply this permission to an already running app.")
+                        Text("Globe asks macOS for access automatically. After Globe appears in Input Monitoring, turn it on and restart Globe. If it still says Needed, remove and add Globe again in System Settings.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
