@@ -14,7 +14,7 @@ public final class PermissionManager: PermissionManaging {
         #if GLOBE_APP_STORE
         true
         #else
-        CGPreflightListenEventAccess()
+        CGPreflightListenEventAccess() || Self.probeListenOnlyEventTap()
         #endif
     }
 

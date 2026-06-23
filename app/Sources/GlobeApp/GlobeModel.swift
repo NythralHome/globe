@@ -20,7 +20,7 @@ final class GlobeModel: ObservableObject {
     private let textLayoutFixer = TextLayoutFixer()
     private let launchAtLoginManager = LaunchAtLoginManager()
     private var pressInterpreter: GlobePressInterpreter
-    private var pendingTimer: Timer?
+    private var pendingPressWorkItem: DispatchWorkItem?
     private var updateCheckTask: Task<Void, Never>?
     private var updateDownloadTask: Task<Void, Never>?
     private var onboardingWindow: NSWindow?
@@ -475,28 +475,29 @@ final class GlobeModel: ObservableObject {
     }
 
     private func stopKeyboardMonitor() {
-        pendingTimer?.invalidate()
-        pendingTimer = nil
+        pendingPressWorkItem?.cancel()
+        pendingPressWorkItem = nil
         keyboardMonitor.stop()
         pressInterpreter.reset()
     }
 
     private func schedulePendingPressTimeout() {
-        pendingTimer?.invalidate()
-        pendingTimer = Timer.scheduledTimer(withTimeInterval: settings.timing.multiPressTimeout + 0.02, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.handlePressInput(.timer(Date()))
-            }
-        }
+        schedulePressTimeout(after: settings.timing.multiPressTimeout + 0.02)
     }
 
     private func scheduleLongPressTimeout() {
-        pendingTimer?.invalidate()
-        pendingTimer = Timer.scheduledTimer(withTimeInterval: settings.timing.longPressDuration + 0.02, repeats: false) { [weak self] _ in
-            Task { @MainActor in
+        schedulePressTimeout(after: settings.timing.longPressDuration + 0.02)
+    }
+
+    private func schedulePressTimeout(after delay: TimeInterval) {
+        pendingPressWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
                 self?.handlePressInput(.timer(Date()))
             }
         }
+        pendingPressWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     private func presentWindowCentered(_ window: NSWindow) {
