@@ -6,44 +6,102 @@ struct OnboardingView: View {
     @ObservedObject var model: GlobeModel
     @State private var step = 0
 
-    private let steps = [
-        OnboardingStep(
-            icon: "globe",
-            title: "Globe",
-            subtitle: "Direct language switching for macOS.",
-            body: "Press Globe/Fn once, twice, or three times to jump straight to the input source you choose. Hold Globe/Fn to open settings."
-        ),
-        OnboardingStep(
-            icon: "lock.shield",
-            title: "Private by Design",
-            subtitle: "Globe only handles the control key.",
-            body: "Globe does not record, store, or transmit typed text. It listens for Globe/Fn key state changes so it can switch input sources."
-        ),
-        OnboardingStep(
-            icon: "switch.2",
-            title: "macOS Setup",
-            subtitle: "Turn off the default Globe key action.",
-            body: "Set “Press Globe key to” to “Do Nothing” in Keyboard settings. This prevents macOS from cycling languages before Globe can switch directly."
-        ),
-        OnboardingStep(
-            icon: "checkmark.seal",
-            title: "Permissions",
-            subtitle: "Allow Input Monitoring.",
-            body: "macOS requires Input Monitoring permission for apps that listen for global keyboard control events. Globe uses it only to detect Globe/Fn."
-        ),
-        OnboardingStep(
-            icon: "keyboard",
-            title: "Key Actions",
-            subtitle: "Choose your direct switches.",
-            body: "Assign installed input sources to single, double, and triple Globe/Fn presses."
-        ),
-        OnboardingStep(
-            icon: "power",
-            title: "Ready",
-            subtitle: "Globe starts with your Mac.",
-            body: "Globe runs quietly in the menu bar and launches at login after setup."
+    private var steps: [OnboardingStep] {
+        #if GLOBE_APP_STORE
+        [
+            OnboardingStep(
+                kind: .intro,
+                icon: "globe",
+                title: "Globe",
+                subtitle: "Direct language switching for macOS.",
+                body: "Use Globe while the app is active to switch directly to the input source you choose. The open-source release also supports global Globe/Fn actions outside the Mac App Store."
+            ),
+            OnboardingStep(
+                kind: .privacy,
+                icon: "lock.shield",
+                title: "Private by Design",
+                subtitle: "Globe does not read typed text.",
+                body: "The Mac App Store build uses local keyboard events only while Globe is active. It does not request global keyboard access."
+            ),
+            OnboardingStep(
+                kind: .keyboardSetup,
+                icon: "switch.2",
+                title: "macOS Setup",
+                subtitle: "Turn off the default Globe key action.",
+                body: "Set “Press Globe key to” to “Do Nothing” in Keyboard settings. This prevents macOS from cycling languages before Globe can switch directly."
+            ),
+            OnboardingStep(
+                kind: .actions,
+                icon: "keyboard",
+                title: "Key Actions",
+                subtitle: "Choose your direct switches.",
+                body: "Assign installed input sources to single, double, and triple Globe/Fn presses."
+            ),
+            OnboardingStep(
+                kind: .ready,
+                icon: "power",
+                title: "Ready",
+                subtitle: "Globe is ready.",
+                body: "Globe runs quietly in the menu bar. You can choose whether it should launch at login."
+            )
+        ]
+        #else
+        var items = [
+            OnboardingStep(
+                kind: .intro,
+                icon: "globe",
+                title: "Globe",
+                subtitle: "Direct language switching for macOS.",
+                body: "Press Globe/Fn once, twice, or three times to jump straight to the input source you choose. Hold Globe/Fn to open settings."
+            ),
+            OnboardingStep(
+                kind: .privacy,
+                icon: "lock.shield",
+                title: "Private by Design",
+                subtitle: "Globe does not read typed text.",
+                body: "Globe does not record, store, or transmit typed text. It listens for Globe/Fn key state changes so it can switch input sources."
+            ),
+            OnboardingStep(
+                kind: .keyboardSetup,
+                icon: "switch.2",
+                title: "macOS Setup",
+                subtitle: "Turn off the default Globe key action.",
+                body: "Set “Press Globe key to” to “Do Nothing” in Keyboard settings. This prevents macOS from cycling languages before Globe can switch directly."
+            )
+        ]
+
+        items.append(
+            OnboardingStep(
+                kind: .permissions,
+                icon: "checkmark.seal",
+                title: "Permissions",
+                subtitle: "Allow Input Monitoring.",
+                body: "macOS requires Input Monitoring permission for apps that listen for global keyboard control events. Globe uses it only to detect Globe/Fn."
+            )
         )
-    ]
+
+        items.append(
+            contentsOf: [
+                OnboardingStep(
+                    kind: .actions,
+                    icon: "keyboard",
+                    title: "Key Actions",
+                    subtitle: "Choose your direct switches.",
+                    body: "Assign installed input sources to single, double, and triple Globe/Fn presses."
+                ),
+                OnboardingStep(
+                    kind: .ready,
+                    icon: "power",
+                    title: "Ready",
+                    subtitle: "Globe is ready.",
+                    body: "Globe runs quietly in the menu bar. You can choose whether it should launch at login."
+                )
+            ]
+        )
+
+        return items
+        #endif
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -63,11 +121,6 @@ struct OnboardingView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refreshSystemState()
-        }
-        .onChange(of: step) { _, newStep in
-            if newStep == steps.count - 1, !model.settings.launchAtLogin {
-                model.enableLaunchAtLogin()
-            }
         }
     }
 
@@ -113,11 +166,19 @@ struct OnboardingView: View {
 
             Spacer()
 
+            #if GLOBE_APP_STORE
+            statusPill(
+                title: "Mac App Store ready",
+                systemImage: "checkmark.circle.fill",
+                color: .green
+            )
+            #else
             statusPill(
                 title: model.accessibilityTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
                 systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle",
                 color: model.accessibilityTrusted ? .green : .orange
             )
+            #endif
         }
         .padding(22)
         .frame(width: 250)
@@ -157,8 +218,8 @@ struct OnboardingView: View {
 
     @ViewBuilder
     private var stepControls: some View {
-        switch step {
-        case 2:
+        switch steps[step].kind {
+        case .keyboardSetup:
             VStack(alignment: .leading, spacing: 10) {
                 Button("Open Keyboard Settings") {
                     model.openKeyboardSettings()
@@ -169,9 +230,9 @@ struct OnboardingView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-        case 3:
+        case .permissions:
             permissionSetup
-        case 4:
+        case .actions:
             VStack(alignment: .leading, spacing: 12) {
                 Picker("Single press", selection: sourceBinding(\.singlePress)) {
                     sourceOptions
@@ -188,14 +249,14 @@ struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: 420)
-        case 5:
+        case .ready:
             VStack(alignment: .leading, spacing: 12) {
                 Toggle("Launch Globe at login", isOn: launchAtLoginBinding)
                 Toggle("Show switching HUD", isOn: showHUDBinding)
                 Toggle("Enable Globe", isOn: enabledBinding)
             }
             .frame(maxWidth: 360)
-        default:
+        case .intro, .privacy:
             EmptyView()
         }
     }
@@ -218,10 +279,9 @@ struct OnboardingView: View {
                     step += 1
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(step == 3 && !model.accessibilityTrusted)
+                .disabled(steps[step].kind == .permissions && !model.accessibilityTrusted)
             } else {
                 Button("Start Using Globe") {
-                    model.enableLaunchAtLogin()
                     model.completeOnboarding()
                     model.closeOnboarding()
                     model.showLaunchStatusWindow()
@@ -235,6 +295,9 @@ struct OnboardingView: View {
     }
 
     private var permissionSetup: some View {
+        #if GLOBE_APP_STORE
+        EmptyView()
+        #else
         VStack(alignment: .leading, spacing: 14) {
             Label(
                 model.accessibilityTrusted ? "Input Monitoring is enabled." : "Input Monitoring is required to detect Globe/Fn.",
@@ -272,6 +335,7 @@ struct OnboardingView: View {
             }
         }
         .frame(maxWidth: 480, alignment: .leading)
+        #endif
     }
 
     private func statusPill(title: String, systemImage: String, color: Color) -> some View {
@@ -336,8 +400,18 @@ struct OnboardingView: View {
 }
 
 private struct OnboardingStep {
+    let kind: OnboardingStepKind
     let icon: String
     let title: String
     let subtitle: String
     let body: String
+}
+
+private enum OnboardingStepKind {
+    case intro
+    case privacy
+    case keyboardSetup
+    case permissions
+    case actions
+    case ready
 }

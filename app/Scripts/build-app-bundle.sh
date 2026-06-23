@@ -114,6 +114,13 @@ if [[ -n "$PROVISIONING_PROFILE" ]]; then
     cp "$PROVISIONING_PROFILE" "$CONTENTS_DIR/embedded.provisionprofile"
 fi
 
+ACCESSIBILITY_USAGE_PLIST=""
+if [[ "$DISTRIBUTION" != "app-store" ]]; then
+    ACCESSIBILITY_USAGE_PLIST='
+    <key>NSAccessibilityUsageDescription</key>
+    <string>Globe needs Input Monitoring permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>'
+fi
+
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -145,8 +152,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <string>public.app-category.utilities</string>
     <key>LSUIElement</key>
     <true/>
-    <key>NSAccessibilityUsageDescription</key>
-    <string>Globe needs Input Monitoring permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>
+$ACCESSIBILITY_USAGE_PLIST
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>ITSAppUsesNonExemptEncryption</key>

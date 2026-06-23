@@ -17,11 +17,19 @@ enum InstallationHealth {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = "Move Globe to Applications"
+            #if GLOBE_APP_STORE
+            alert.informativeText = """
+            macOS is running Globe from a temporary protected location.
+
+            Quit Globe, move it to Applications, then launch it from Applications.
+            """
+            #else
             alert.informativeText = """
             macOS is running Globe from a temporary protected location. This can make Accessibility permission unreliable.
 
             Quit Globe, open the installer again, drag Globe.app to Applications, then launch it from Applications.
             """
+            #endif
             alert.addButton(withTitle: "Quit Globe")
             alert.addButton(withTitle: "Open Applications")
             alert.addButton(withTitle: "Continue Anyway")

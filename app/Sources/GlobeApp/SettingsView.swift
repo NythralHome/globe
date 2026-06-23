@@ -75,7 +75,9 @@ struct SettingsView: View {
 
             Spacer()
 
+            #if !GLOBE_APP_STORE
             permissionStatus
+            #endif
         }
         .padding(18)
         .frame(width: 210)
@@ -83,6 +85,9 @@ struct SettingsView: View {
     }
 
     private var permissionStatus: some View {
+        #if GLOBE_APP_STORE
+        EmptyView()
+        #else
         Label(
             model.accessibilityTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
             systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
@@ -96,6 +101,7 @@ struct SettingsView: View {
             (model.accessibilityTrusted ? Color.green : Color.orange).opacity(0.12),
             in: RoundedRectangle(cornerRadius: 8)
         )
+        #endif
     }
 
     private var tabHeader: some View {
@@ -139,6 +145,9 @@ struct SettingsView: View {
     }
 
     private var permissionsTab: some View {
+        #if GLOBE_APP_STORE
+        EmptyView()
+        #else
         VStack(alignment: .leading, spacing: 18) {
             settingsGroup {
                 HStack {
@@ -217,6 +226,7 @@ struct SettingsView: View {
                 }
             }
         }
+        #endif
     }
 
     private var actionsTab: some View {
@@ -459,6 +469,14 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case actions
     case advanced
     case about
+
+    static var allCases: [SettingsTab] {
+        #if GLOBE_APP_STORE
+        return [.general, .actions, .advanced, .about]
+        #else
+        return [.general, .permissions, .actions, .advanced, .about]
+        #endif
+    }
 
     var id: String { rawValue }
 

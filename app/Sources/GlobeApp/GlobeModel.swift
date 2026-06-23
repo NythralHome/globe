@@ -75,10 +75,18 @@ final class GlobeModel: ObservableObject {
         inputSources = inputSourceManager.availableInputSources()
         currentInputSourceName = inputSourceManager.currentInputSource()?.localizedName ?? "Unknown"
         settings.launchAtLogin = launchAtLoginManager.isEnabled
+        #if GLOBE_APP_STORE
+        DiagnosticLogger.log("refreshSystemState current=\(currentInputSourceName) sources=\(inputSources.map(\.localizedName).joined(separator: ","))")
+        #else
         DiagnosticLogger.log("refreshSystemState accessibilityTrusted=\(accessibilityTrusted) current=\(currentInputSourceName) sources=\(inputSources.map(\.localizedName).joined(separator: ","))")
+        #endif
     }
 
     func requestAccessibilityPermission() {
+        #if GLOBE_APP_STORE
+        refreshSystemState()
+        startKeyboardMonitor()
+        #else
         let isTrusted = permissionManager.requestAccessibilityPermission()
         DiagnosticLogger.log("requestAccessibilityPermission returned=\(isTrusted)")
         if !isTrusted {
@@ -97,6 +105,7 @@ final class GlobeModel: ObservableObject {
                 startKeyboardMonitor()
             }
         }
+        #endif
     }
 
     func beginAccessibilitySetup() {
@@ -409,10 +418,12 @@ final class GlobeModel: ObservableObject {
             return
         }
 
+        #if !GLOBE_APP_STORE
         guard accessibilityTrusted else {
             DiagnosticLogger.log("KeyboardMonitor.start skipped; Accessibility permission is missing")
             return
         }
+        #endif
 
         keyboardMonitor.start()
     }
@@ -597,6 +608,13 @@ final class GlobeModel: ObservableObject {
             .joined(separator: "\n")
         let mapping = settings.mapping
 
+        let accessLine: String
+        #if GLOBE_APP_STORE
+        accessLine = "Keyboard monitoring: local app events"
+        #else
+        accessLine = "Accessibility trusted: \(accessibilityTrusted)"
+        #endif
+
         return """
         Globe Diagnostics
         =================
@@ -604,7 +622,7 @@ final class GlobeModel: ObservableObject {
         Generated: \(ISO8601DateFormatter().string(from: Date()))
         Globe version: \(AppVersion.displayString)
         macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
-        Accessibility trusted: \(accessibilityTrusted)
+        \(accessLine)
         Current input source: \(currentInputSourceName)
         Launch at login: \(settings.launchAtLogin)
         Globe enabled: \(settings.isEnabled)

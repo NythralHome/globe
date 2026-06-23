@@ -23,9 +23,11 @@ struct GlobeMenu: View {
             model.checkForUpdates()
         }
 
+        #if !GLOBE_APP_STORE
         Button("Request Input Monitoring") {
             model.beginAccessibilitySetup()
         }
+        #endif
 
         Button("Open Keyboard Settings") {
             model.openKeyboardSettings()

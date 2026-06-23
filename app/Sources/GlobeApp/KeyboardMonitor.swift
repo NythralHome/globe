@@ -1,11 +1,16 @@
+import AppKit
 import CoreGraphics
 import Foundation
 import GlobeCore
 import Carbon.HIToolbox
 
 final class KeyboardMonitor: @unchecked Sendable {
+    #if GLOBE_APP_STORE
+    private var localMonitor: Any?
+    #else
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    #endif
     private var isFunctionKeyPressed = false
     private let handler: @MainActor (GlobePressInterpreter.Input) -> Void
 
@@ -14,6 +19,18 @@ final class KeyboardMonitor: @unchecked Sendable {
     }
 
     func start() {
+        #if GLOBE_APP_STORE
+        guard localMonitor == nil else {
+            DiagnosticLogger.log("KeyboardMonitor.start ignored; local monitor already exists")
+            return
+        }
+
+        DiagnosticLogger.log("KeyboardMonitor.start local NSEvent monitor")
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handle(event: event)
+            return event
+        }
+        #else
         guard eventTap == nil else {
             DiagnosticLogger.log("KeyboardMonitor.start ignored; event tap already exists")
             return
@@ -62,10 +79,18 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         CGEvent.tapEnable(tap: tap, enable: true)
         DiagnosticLogger.log("KeyboardMonitor.start created HID event tap")
+        #endif
     }
 
     func stop() {
         DiagnosticLogger.log("KeyboardMonitor.stop")
+        #if GLOBE_APP_STORE
+        if let localMonitor {
+            NSEvent.removeMonitor(localMonitor)
+        }
+
+        localMonitor = nil
+        #else
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
@@ -76,8 +101,10 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         runLoopSource = nil
         eventTap = nil
+        #endif
     }
 
+    #if !GLOBE_APP_STORE
     private func enableEventTap() {
         guard let eventTap else {
             return
@@ -115,4 +142,33 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         return true
     }
+    #endif
+
+    #if GLOBE_APP_STORE
+    private func handle(event: NSEvent) {
+        guard event.type == .flagsChanged else {
+            return
+        }
+
+        let hasFunctionFlag = event.modifierFlags.contains(.function)
+        DiagnosticLogger.log("local flagsChanged keyCode=\(event.keyCode) flags=\(event.modifierFlags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
+
+        guard hasFunctionFlag != isFunctionKeyPressed else {
+            return
+        }
+
+        isFunctionKeyPressed = hasFunctionFlag
+
+        let now = Date()
+        let input: GlobePressInterpreter.Input = hasFunctionFlag ? .keyDown(now) : .keyUp(now)
+        DiagnosticLogger.log("KeyboardMonitor interpreted local \(hasFunctionFlag ? "keyDown" : "keyUp")")
+        let handler = handler
+
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                handler(input)
+            }
+        }
+    }
+    #endif
 }
