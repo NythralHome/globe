@@ -253,7 +253,49 @@ struct SettingsView: View {
                         value: model.settings.appStoreShortcut.displayName,
                         target: .action
                     )
+
+                    SettingsDivider()
+
+                    SettingsPickerRow(title: "Single press") {
+                        Picker("Single press", selection: sourceBinding(\.singlePress)) {
+                            sourceOptions
+                        }
+                        .labelsHidden()
+                    }
+
+                    SettingsDivider()
+
+                    SettingsPickerRow(title: "Double press") {
+                        Picker("Double press", selection: sourceBinding(\.doublePress)) {
+                            sourceOptions
+                        }
+                        .labelsHidden()
+                    }
+
+                    SettingsDivider()
+
+                    SettingsPickerRow(title: "Triple press") {
+                        Picker("Triple press", selection: sourceBinding(\.triplePress)) {
+                            sourceOptions
+                        }
+                        .labelsHidden()
+                    }
+
+                    SettingsDivider()
+
+                    SettingsPickerRow(title: "Long press") {
+                        Picker("Long press", selection: longPressBinding) {
+                            Text("Open settings").tag(CodableGlobePressAction.openSettings)
+                            Text("Show input source picker").tag(CodableGlobePressAction.showInputSourcePicker)
+                            Text("Do nothing").tag(CodableGlobePressAction.none)
+                        }
+                        .labelsHidden()
+                    }
                 }
+            }
+
+            Button("Use Suggested Mapping") {
+                model.applyRecommendedInputSourceMapping()
             }
 
             settingsGroup {
@@ -274,48 +316,6 @@ struct SettingsView: View {
                         )
                     }
                 }
-            }
-
-            settingsGroup {
-                SettingsPickerRow(title: "Single press") {
-                    Picker("Single press", selection: sourceBinding(\.singlePress)) {
-                        sourceOptions
-                    }
-                    .labelsHidden()
-                }
-
-                SettingsDivider()
-
-                SettingsPickerRow(title: "Double press") {
-                    Picker("Double press", selection: sourceBinding(\.doublePress)) {
-                        sourceOptions
-                    }
-                    .labelsHidden()
-                }
-
-                SettingsDivider()
-
-                SettingsPickerRow(title: "Triple press") {
-                    Picker("Triple press", selection: sourceBinding(\.triplePress)) {
-                        sourceOptions
-                    }
-                    .labelsHidden()
-                }
-
-                SettingsDivider()
-
-                SettingsPickerRow(title: "Long press") {
-                    Picker("Long press", selection: longPressBinding) {
-                        Text("Open settings").tag(CodableGlobePressAction.openSettings)
-                        Text("Show input source picker").tag(CodableGlobePressAction.showInputSourcePicker)
-                        Text("Do nothing").tag(CodableGlobePressAction.none)
-                    }
-                    .labelsHidden()
-                }
-            }
-
-            Button("Use Suggested Mapping") {
-                model.applyRecommendedInputSourceMapping()
             }
         }
     }
