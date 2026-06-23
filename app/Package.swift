@@ -21,7 +21,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "GlobeApp",
-            dependencies: ["GlobeCore"]
+            dependencies: ["GlobeCore"],
+            linkerSettings: [
+                .linkedFramework("Carbon")
+            ]
         ),
         .testTarget(
             name: "GlobeCoreTests",

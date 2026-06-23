@@ -4,31 +4,95 @@ import Foundation
 import GlobeCore
 import Carbon.HIToolbox
 
+enum KeyboardTrigger: Sendable {
+    case press(GlobePressInterpreter.Input)
+    case inputSource(id: String)
+}
+
 final class KeyboardMonitor: @unchecked Sendable {
     #if GLOBE_APP_STORE
-    private var localMonitor: Any?
+    private var hotKeyRefs: [EventHotKeyRef] = []
+    private var eventHandlerRef: EventHandlerRef?
+    private var appStoreShortcut: CodableKeyboardShortcut = .controlOptionZ
+    private var appStoreInputSourceShortcuts: [String: CodableKeyboardShortcut] = [:]
+    private var hotKeyActions: [UInt32: KeyboardTrigger] = [:]
     #else
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     #endif
     private var isFunctionKeyPressed = false
-    private let handler: @MainActor (GlobePressInterpreter.Input) -> Void
+    private let handler: @MainActor (KeyboardTrigger) -> Void
 
-    init(handler: @escaping @MainActor (GlobePressInterpreter.Input) -> Void) {
+    init(handler: @escaping @MainActor (KeyboardTrigger) -> Void) {
         self.handler = handler
     }
 
+    #if GLOBE_APP_STORE
+    func configureAppStoreShortcuts(
+        actionShortcut: CodableKeyboardShortcut,
+        inputSourceShortcuts: [String: CodableKeyboardShortcut]
+    ) {
+        appStoreShortcut = actionShortcut
+        appStoreInputSourceShortcuts = inputSourceShortcuts
+    }
+    #endif
+
     func start() {
         #if GLOBE_APP_STORE
-        guard localMonitor == nil else {
-            DiagnosticLogger.log("KeyboardMonitor.start ignored; local monitor already exists")
+        guard hotKeyRefs.isEmpty else {
+            DiagnosticLogger.log("KeyboardMonitor.start ignored; app store hotkey already exists")
             return
         }
 
-        DiagnosticLogger.log("KeyboardMonitor.start local NSEvent monitor")
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            self?.handle(event: event)
-            return event
+        DiagnosticLogger.log("KeyboardMonitor.start app store hotkeys")
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: UInt32(kEventHotKeyPressed)
+        )
+        let target = GetApplicationEventTarget()
+        let refcon = Unmanaged.passUnretained(self).toOpaque()
+        let handlerStatus = InstallEventHandler(
+            target,
+            { _, event, refcon in
+                guard let refcon else {
+                    return noErr
+                }
+
+                var hotKeyID = EventHotKeyID()
+                let status = GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hotKeyID
+                )
+
+                guard status == noErr else {
+                    return noErr
+                }
+
+                let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(refcon).takeUnretainedValue()
+                monitor.handleAppStoreHotKey(id: hotKeyID.id)
+                return noErr
+            },
+            1,
+            &eventType,
+            refcon,
+            &eventHandlerRef
+        )
+
+        guard handlerStatus == noErr else {
+            DiagnosticLogger.log("KeyboardMonitor.start failed; InstallEventHandler status=\(handlerStatus)")
+            return
+        }
+
+        registerAppStoreHotKeys(target: target)
+
+        guard !hotKeyRefs.isEmpty else {
+            removeAppStoreEventHandler()
+            return
         }
         #else
         guard eventTap == nil else {
@@ -85,11 +149,13 @@ final class KeyboardMonitor: @unchecked Sendable {
     func stop() {
         DiagnosticLogger.log("KeyboardMonitor.stop")
         #if GLOBE_APP_STORE
-        if let localMonitor {
-            NSEvent.removeMonitor(localMonitor)
+        for hotKeyRef in hotKeyRefs {
+            UnregisterEventHotKey(hotKeyRef)
         }
 
-        localMonitor = nil
+        hotKeyRefs = []
+        hotKeyActions = [:]
+        removeAppStoreEventHandler()
         #else
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
@@ -136,7 +202,7 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                handler(input)
+                handler(.press(input))
             }
         }
 
@@ -145,30 +211,84 @@ final class KeyboardMonitor: @unchecked Sendable {
     #endif
 
     #if GLOBE_APP_STORE
-    private func handle(event: NSEvent) {
-        guard event.type == .flagsChanged else {
+    private static let hotKeySignature = OSType(0x474C4245)
+    private static let actionHotKeyID: UInt32 = 1
+
+    private func registerAppStoreHotKeys(target: EventTargetRef?) {
+        register(
+            appStoreShortcut,
+            id: Self.actionHotKeyID,
+            target: target,
+            action: .press(.keyDown(Date()))
+        )
+
+        var nextID: UInt32 = 100
+        for (sourceID, shortcut) in appStoreInputSourceShortcuts.sorted(by: { $0.key < $1.key }) {
+            register(shortcut, id: nextID, target: target, action: .inputSource(id: sourceID))
+            nextID += 1
+        }
+    }
+
+    private func register(
+        _ shortcut: CodableKeyboardShortcut,
+        id: UInt32,
+        target: EventTargetRef?,
+        action: KeyboardTrigger
+    ) {
+        var registeredHotKeyRef: EventHotKeyRef?
+        let hotKeyID = EventHotKeyID(signature: Self.hotKeySignature, id: id)
+        let registerStatus = RegisterEventHotKey(
+            shortcut.keyCode,
+            shortcut.modifiers,
+            hotKeyID,
+            target,
+            0,
+            &registeredHotKeyRef
+        )
+
+        guard registerStatus == noErr, let registeredHotKeyRef else {
+            DiagnosticLogger.log("KeyboardMonitor.start failed; RegisterEventHotKey shortcut=\(shortcut.displayName) status=\(registerStatus)")
             return
         }
 
-        let hasFunctionFlag = event.modifierFlags.contains(.function)
-        DiagnosticLogger.log("local flagsChanged keyCode=\(event.keyCode) flags=\(event.modifierFlags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
+        hotKeyRefs.append(registeredHotKeyRef)
+        hotKeyActions[id] = action
+        DiagnosticLogger.log("KeyboardMonitor registered shortcut \(shortcut.displayName) id=\(id)")
+    }
 
-        guard hasFunctionFlag != isFunctionKeyPressed else {
+    private func handleAppStoreHotKey(id: UInt32) {
+        guard let action = hotKeyActions[id] else {
             return
         }
 
-        isFunctionKeyPressed = hasFunctionFlag
+        if case let .inputSource(sourceID) = action {
+            let handler = handler
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    handler(.inputSource(id: sourceID))
+                }
+            }
+            return
+        }
 
         let now = Date()
-        let input: GlobePressInterpreter.Input = hasFunctionFlag ? .keyDown(now) : .keyUp(now)
-        DiagnosticLogger.log("KeyboardMonitor interpreted local \(hasFunctionFlag ? "keyDown" : "keyUp")")
+        DiagnosticLogger.log("KeyboardMonitor interpreted app store action shortcut")
         let handler = handler
 
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                handler(input)
+                handler(.press(.keyDown(now)))
+                handler(.press(.keyUp(Date())))
             }
         }
+    }
+
+    private func removeAppStoreEventHandler() {
+        if let eventHandlerRef {
+            RemoveEventHandler(eventHandlerRef)
+        }
+
+        eventHandlerRef = nil
     }
     #endif
 }

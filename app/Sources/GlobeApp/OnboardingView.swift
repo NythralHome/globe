@@ -14,28 +14,28 @@ struct OnboardingView: View {
                 icon: "globe",
                 title: "Globe",
                 subtitle: "Direct language switching for macOS.",
-                body: "Use Globe while the app is active to switch directly to the input source you choose. The open-source release also supports global Globe/Fn actions outside the Mac App Store."
+                body: "Press Control-Option-Z anywhere to switch directly to the input source you choose. Globe Pro adds direct Globe/Fn switching outside the Mac App Store."
             ),
             OnboardingStep(
                 kind: .privacy,
                 icon: "lock.shield",
                 title: "Private by Design",
                 subtitle: "Globe does not read typed text.",
-                body: "The Mac App Store build uses local keyboard events only while Globe is active. It does not request global keyboard access."
+                body: "The Mac App Store build uses a registered system hotkey. It does not request Accessibility access and does not monitor typed text."
             ),
             OnboardingStep(
                 kind: .keyboardSetup,
                 icon: "switch.2",
-                title: "macOS Setup",
-                subtitle: "Turn off the default Globe key action.",
-                body: "Set “Press Globe key to” to “Do Nothing” in Keyboard settings. This prevents macOS from cycling languages before Globe can switch directly."
+                title: "Global Shortcut",
+                subtitle: "Start with Control-Option-Z, then customize.",
+                body: "The App Store edition uses standard global shortcuts so it can work without Accessibility permissions. You can change the main shortcut and add direct shortcuts for individual languages."
             ),
             OnboardingStep(
                 kind: .actions,
                 icon: "keyboard",
                 title: "Key Actions",
                 subtitle: "Choose your direct switches.",
-                body: "Assign installed input sources to single, double, and triple Globe/Fn presses."
+                body: "Assign installed input sources to single, double, and triple presses of your main shortcut, or give each language its own direct shortcut."
             ),
             OnboardingStep(
                 kind: .ready,

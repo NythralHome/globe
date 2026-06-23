@@ -1,10 +1,13 @@
 import AppKit
+import Carbon.HIToolbox
 import GlobeCore
 import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var model: GlobeModel
     @State private var selectedTab: SettingsTab = .general
+    @State private var recordingShortcut: RecordingShortcutTarget?
+    @State private var shortcutMonitor: Any?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -27,6 +30,11 @@ struct SettingsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refreshSystemState()
+        }
+        .onDisappear {
+            #if GLOBE_APP_STORE
+            stopRecordingShortcut()
+            #endif
         }
     }
 
@@ -231,6 +239,45 @@ struct SettingsView: View {
 
     private var actionsTab: some View {
         VStack(alignment: .leading, spacing: 18) {
+            #if GLOBE_APP_STORE
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Global shortcut")
+                        .font(.headline)
+                    Text("Press the shortcut anywhere to run the action mapping below. Press it repeatedly for double and triple actions.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    shortcutRow(
+                        title: "Action shortcut",
+                        value: model.settings.appStoreShortcut.displayName,
+                        target: .action
+                    )
+                }
+            }
+
+            settingsGroup {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Direct language shortcuts")
+                        .font(.headline)
+                    Text("Assign an optional shortcut to each input source. These shortcuts switch directly to that language.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    ForEach(model.inputSources) { source in
+                        shortcutRow(
+                            title: source.localizedName,
+                            value: model.settings.appStoreInputSourceShortcuts[source.id]?.displayName ?? "Not set",
+                            target: .inputSource(source.id),
+                            canClear: model.settings.appStoreInputSourceShortcuts[source.id] != nil
+                        )
+                    }
+                }
+            }
+            #endif
+
             settingsGroup {
                 SettingsPickerRow(title: "Single press") {
                     Picker("Single press", selection: sourceBinding(\.singlePress)) {
@@ -420,6 +467,145 @@ struct SettingsView: View {
         )
     }
 
+    #if GLOBE_APP_STORE
+    private func shortcutRow(
+        title: String,
+        value: String,
+        target: RecordingShortcutTarget,
+        canClear: Bool = false
+    ) -> some View {
+        HStack(spacing: 12) {
+            Text(title)
+            Spacer()
+            Text(recordingShortcut == target ? "Press new shortcut..." : value)
+                .foregroundStyle(recordingShortcut == target ? .blue : .secondary)
+                .lineLimit(1)
+                .frame(maxWidth: 190, alignment: .trailing)
+
+            Button(recordingShortcut == target ? "Cancel" : "Change") {
+                if recordingShortcut == target {
+                    stopRecordingShortcut()
+                } else {
+                    startRecordingShortcut(target)
+                }
+            }
+
+            if canClear {
+                Button("Clear") {
+                    clearShortcut(target)
+                }
+            }
+        }
+        .font(.system(size: 15))
+    }
+
+    private func startRecordingShortcut(_ target: RecordingShortcutTarget) {
+        stopRecordingShortcut()
+        recordingShortcut = target
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard let shortcut = makeShortcut(from: event) else {
+                NSSound.beep()
+                return nil
+            }
+
+            applyShortcut(shortcut, target: target)
+            stopRecordingShortcut()
+            return nil
+        }
+    }
+
+    private func stopRecordingShortcut() {
+        if let shortcutMonitor {
+            NSEvent.removeMonitor(shortcutMonitor)
+        }
+
+        shortcutMonitor = nil
+        recordingShortcut = nil
+    }
+
+    private func applyShortcut(_ shortcut: CodableKeyboardShortcut, target: RecordingShortcutTarget) {
+        switch target {
+        case .action:
+            model.settings.appStoreShortcut = shortcut
+        case let .inputSource(id):
+            model.settings.appStoreInputSourceShortcuts[id] = shortcut
+        }
+
+        model.saveSettings()
+    }
+
+    private func clearShortcut(_ target: RecordingShortcutTarget) {
+        guard case let .inputSource(id) = target else {
+            return
+        }
+
+        model.settings.appStoreInputSourceShortcuts.removeValue(forKey: id)
+        model.saveSettings()
+    }
+
+    private func makeShortcut(from event: NSEvent) -> CodableKeyboardShortcut? {
+        let modifiers = carbonModifiers(from: event.modifierFlags)
+        guard modifiers != 0 else {
+            return nil
+        }
+
+        guard let keyName = keyName(for: event), !keyName.isEmpty else {
+            return nil
+        }
+
+        return CodableKeyboardShortcut(
+            keyCode: UInt32(event.keyCode),
+            modifiers: modifiers,
+            displayName: "\(modifierDisplayName(from: event.modifierFlags))-\(keyName)"
+        )
+    }
+
+    private func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {
+        var modifiers: UInt32 = 0
+        if flags.contains(.control) {
+            modifiers |= UInt32(controlKey)
+        }
+        if flags.contains(.option) {
+            modifiers |= UInt32(optionKey)
+        }
+        if flags.contains(.command) {
+            modifiers |= UInt32(cmdKey)
+        }
+        if flags.contains(.shift) {
+            modifiers |= UInt32(shiftKey)
+        }
+        return modifiers
+    }
+
+    private func modifierDisplayName(from flags: NSEvent.ModifierFlags) -> String {
+        var names: [String] = []
+        if flags.contains(.control) {
+            names.append("Control")
+        }
+        if flags.contains(.option) {
+            names.append("Option")
+        }
+        if flags.contains(.command) {
+            names.append("Command")
+        }
+        if flags.contains(.shift) {
+            names.append("Shift")
+        }
+        return names.joined(separator: "-")
+    }
+
+    private func keyName(for event: NSEvent) -> String? {
+        if event.keyCode == 49 {
+            return "Space"
+        }
+        if event.keyCode == 53 {
+            return nil
+        }
+
+        return event.charactersIgnoringModifiers?.uppercased()
+    }
+    #endif
+
     private var longPressBinding: Binding<CodableGlobePressAction> {
         Binding(
             get: { model.settings.mapping.longPress },
@@ -502,7 +688,11 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .permissions:
             "macOS access needed for direct Globe/Fn switching."
         case .actions:
+            #if GLOBE_APP_STORE
+            "Choose what Control-Option-Z does."
+            #else
             "Choose what each Globe/Fn press does."
+            #endif
         case .advanced:
             "Timing controls and build information."
         case .about:
@@ -561,4 +751,9 @@ private struct SettingsDivider: View {
         Divider()
             .padding(.leading, 2)
     }
+}
+
+private enum RecordingShortcutTarget: Equatable {
+    case action
+    case inputSource(String)
 }

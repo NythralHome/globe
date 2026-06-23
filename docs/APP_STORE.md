@@ -1,89 +1,71 @@
-# Mac App Store Readiness
+# Mac App Store Build
 
-Globe is currently ready for Developer ID distribution outside the Mac App Store. The public beta PKG is signed with Developer ID Installer, notarized by Apple, stapled, and distributed through GitHub Releases.
+Globe has two distribution flavors from the same `main` branch.
 
-The Mac App Store path needs a separate build and review track. Apple requires Mac App Store apps to be sandboxed, submitted as app bundles through App Store Connect/Xcode tooling, and updated by the App Store rather than by a third-party installer.
+- **Nythral Globe for the Mac App Store** uses a registered global shortcut, `Control-Option-Z`, through Carbon `RegisterEventHotKey`. It does not request Accessibility or Input Monitoring access.
+- **Globe Pro** is the signed and notarized Developer ID installer from `globe.nythral.com`. It keeps direct Globe/Fn switching through Input Monitoring.
 
-Current preparation status:
+## Current Status
 
-- Bundle ID `com.nythral.globe` exists in App Store Connect.
-- App Store Connect app record exists as `Nythral Globe` with Apple ID `6781046732`.
-- A Mac App Store provisioning profile exists for `com.nythral.globe`.
-- Local Apple Distribution and Mac Installer Distribution signing identities are installed on the build Mac.
-- `app/Scripts/package-app-store.sh` builds `app/.build/app-store/Globe-0.1.0-37-mas.pkg`.
-- `Globe-0.1.0-14-mas.pkg` was validated and uploaded successfully through `altool`; delivery UUID `427c91d3-8150-410f-a994-bc92975231c8` returned `build-status: VALID`.
+- Bundle ID: `com.nythral.globe`
+- App Store Connect Apple ID: `6781046732`
+- App Store package script: `app/Scripts/package-app-store.sh`
+- Current package path: `app/.build/app-store/Globe-0.1.0-38-mas.pkg`
+- App Store build flag: `GLOBE_DISTRIBUTION=app-store`
 
-## Main Risk
+## App Store Behavior
 
-Globe's core feature depends on observing the Globe/Fn key globally and requesting Input Monitoring permission. Before submitting to App Review, we need to prove that the same behavior works in a sandboxed App Store/TestFlight build.
+The App Store build is sandboxed and avoids Accessibility-only APIs for non-accessibility purposes.
 
-Decision gate:
+- Default global trigger: `Control-Option-Z`
+- Users can change the main action shortcut in Settings.
+- Single, double, and triple presses of the main shortcut map to configured input sources.
+- Users can also assign direct shortcuts to individual input sources, such as `Control-1` for one language and `Control-2` for another.
+- Launch at Login is never enabled automatically; it is controlled only by an explicit user toggle.
+- Updates are handled by the Mac App Store.
+- The app does not record typed text, inspect character key presses, or transmit keyboard data.
 
-- If a sandboxed TestFlight build can observe Globe/Fn reliably, continue toward App Store submission.
-- If sandboxing prevents reliable key observation, keep Developer ID distribution as the primary channel and do not submit the current architecture to the Mac App Store.
+## Pro Behavior
 
-## Technical Checklist
+The Pro build is distributed outside the Mac App Store as a signed and notarized installer.
 
-- Create a dedicated App Store build configuration or Xcode archive path.
-- Add App Sandbox entitlement with the smallest possible entitlement set.
-- Remove the PKG/postinstall flow from the App Store build. App Store installs and updates must be handled by Apple.
-- Disable direct GitHub installer downloads in the App Store build. The update UI can show release notes, but installation should route through the App Store.
-- Test first-run onboarding, Input Monitoring permission request, launch at login, and Globe/Fn detection in a sandboxed local build.
-- Submit an internal TestFlight build and retest on a clean Mac user account.
-- Add a public privacy policy URL: `https://globe.nythral.com/privacy`.
-- Use the App Store build flag: `GLOBE_DISTRIBUTION=app-store`.
-- Add complete App Store metadata, screenshots, support URL, marketing URL, age rating, and review notes.
-- Include App Review notes explaining why Input Monitoring permission is requested and that Globe does not record typed text.
+- Global trigger: direct Globe/Fn key.
+- Single, double, triple, and long Globe/Fn actions are supported.
+- Input Monitoring is requested only for direct Globe/Fn key state detection.
+- Updates can be downloaded from GitHub Releases or the product website.
 
-## Metadata Checklist
+## Build
 
-- App Store listing name: `Nythral Globe` (`Globe` was unavailable in App Store Connect).
-- Subtitle: direct Globe/Fn input source switching.
-- Description: native macOS menu bar utility for people who type in multiple languages.
-- Privacy: no typed text is recorded, stored, or transmitted.
-- Privacy policy URL: `https://globe.nythral.com/privacy`
-- Support URL: GitHub Issues or a Globe support page.
-- Marketing URL: `https://globe.nythral.com`
-- Screenshots: welcome setup, settings tabs, key actions, permissions, and menu bar behavior.
-- Review notes: include setup steps for `Press Globe key to: Do Nothing` and Input Monitoring permission.
-
-## Local App Store Build Probe
-
-Build a sandboxed local bundle:
+Build a sandboxed App Store bundle:
 
 ```sh
 cd app
-GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=37 Scripts/build-app-bundle.sh
+GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=38 Scripts/build-app-bundle.sh
 ```
 
-The local probe uses ad-hoc signing unless `GLOBE_CODESIGN_IDENTITY` is set. It verifies that the app can be built with App Sandbox entitlements and the `GLOBE_APP_STORE` compile flag. A real App Store upload still needs Apple distribution signing through App Store Connect/Xcode tooling.
-
-Build a Mac App Store upload package when Apple Distribution, Mac Installer Distribution, and a Mac App Store provisioning profile are installed locally:
+Build the App Store upload package:
 
 ```sh
 cd app
 Scripts/package-app-store.sh
 ```
 
-The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=35`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`. The generated `Info.plist` includes `ITSAppUsesNonExemptEncryption=false` so App Store Connect can detect export compliance automatically.
-
-Expected package path:
-
-```text
-app/.build/app-store/Globe-0.1.0-37-mas.pkg
-```
+The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=38`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`.
 
 ## Suggested Review Notes
 
-Globe is a macOS menu bar utility that lets users map single, double, triple, and long Globe/Fn key presses to input source actions. It requests Input Monitoring permission only to observe Globe/Fn key state changes globally. Globe does not record typed text, keystroke contents, or user documents.
+Nythral Globe is a native macOS menu bar utility for predictable input source switching.
+
+This build does not request Accessibility or Input Monitoring access. It uses the system global hotkey API (`RegisterEventHotKey`) to register user-configurable global shortcuts. The default action shortcut is `Control-Option-Z`; users can map single, double, and triple presses of that shortcut to specific macOS input sources, and can also assign direct shortcuts to individual input sources.
+
+Launch at Login is not enabled automatically. It is available only as an explicit user-controlled toggle in settings.
 
 To test:
 
-1. Install and launch Globe.
-2. In System Settings > Keyboard, set `Press Globe key to` to `Do Nothing`.
-3. In Globe setup, click `Request Input Monitoring`. If Globe is not listed in System Settings > Privacy & Security > Input Monitoring, add it manually with `+`, enable it, and restart Globe.
-4. Open Globe Settings > Permissions and use `Test Globe key`.
-5. Configure input sources in Settings > Key Actions and press Globe/Fn.
+1. Install and launch Nythral Globe.
+2. Open Settings > Key Actions and assign input sources to single, double, and triple shortcut actions.
+3. Press `Control-Option-Z` from another app to switch to the configured input source.
+4. Optionally assign direct shortcuts to input sources, for example `Control-1` and `Control-2`, then test them from another app.
 
 ## Apple References
 

@@ -28,8 +28,8 @@ final class GlobeModel: ObservableObject {
     private var settingsWindowDelegate: SettingsWindowDelegate?
     private var launchStatusWindow: NSWindow?
     private var launchStatusWindowDelegate: LaunchStatusWindowDelegate?
-    private lazy var keyboardMonitor = KeyboardMonitor { [weak self] input in
-        self?.handlePressInput(input)
+    private lazy var keyboardMonitor = KeyboardMonitor { [weak self] trigger in
+        self?.handleKeyboardTrigger(trigger)
     }
 
     init(
@@ -44,6 +44,9 @@ final class GlobeModel: ObservableObject {
         let settings = settingsStore.load()
         self.settings = settings
         self.pressInterpreter = GlobePressInterpreter(timing: settings.timing)
+        #if GLOBE_APP_STORE
+        self.lastGlobeKeyTestEvent = "Press \(settings.appStoreShortcut.displayName) to test shortcut detection."
+        #endif
 
         DiagnosticLogger.log("GlobeModel.init enabled=\(settings.isEnabled) timing=\(settings.timing)")
         refreshSystemState()
@@ -62,11 +65,10 @@ final class GlobeModel: ObservableObject {
         try? launchAtLoginManager.setEnabled(settings.launchAtLogin)
         settingsStore.save(settings)
         pressInterpreter = GlobePressInterpreter(timing: settings.timing)
+        stopKeyboardMonitor()
 
         if settings.isEnabled {
             startKeyboardMonitor()
-        } else {
-            stopKeyboardMonitor()
         }
     }
 
@@ -157,7 +159,7 @@ final class GlobeModel: ObservableObject {
     }
 
     func resetGlobeKeyTest() {
-        lastGlobeKeyTestEvent = "Press Globe/Fn to test key detection."
+        lastGlobeKeyTestEvent = AppDistribution.isAppStore ? "Press your shortcut to test detection." : "Press Globe/Fn to test key detection."
     }
 
     func exportDiagnostics() {
@@ -372,6 +374,15 @@ final class GlobeModel: ObservableObject {
         }
     }
 
+    func handleKeyboardTrigger(_ trigger: KeyboardTrigger) {
+        switch trigger {
+        case let .press(input):
+            handlePressInput(input)
+        case let .inputSource(id):
+            perform(.inputSource(id: id))
+        }
+    }
+
     private func perform(_ action: GlobePressAction) {
         switch action {
         case let .inputSource(id):
@@ -405,9 +416,17 @@ final class GlobeModel: ObservableObject {
 
         switch input {
         case let .keyDown(date):
+            #if GLOBE_APP_STORE
+            lastGlobeKeyTestEvent = "Detected shortcut at \(formatter.string(from: date))."
+            #else
             lastGlobeKeyTestEvent = "Detected Globe/Fn down at \(formatter.string(from: date))."
+            #endif
         case let .keyUp(date):
+            #if GLOBE_APP_STORE
+            lastGlobeKeyTestEvent = "Completed shortcut at \(formatter.string(from: date))."
+            #else
             lastGlobeKeyTestEvent = "Detected Globe/Fn up at \(formatter.string(from: date))."
+            #endif
         case .timer:
             break
         }
@@ -417,6 +436,13 @@ final class GlobeModel: ObservableObject {
         guard settings.isEnabled else {
             return
         }
+
+        #if GLOBE_APP_STORE
+        keyboardMonitor.configureAppStoreShortcuts(
+            actionShortcut: settings.appStoreShortcut,
+            inputSourceShortcuts: settings.appStoreInputSourceShortcuts
+        )
+        #endif
 
         #if !GLOBE_APP_STORE
         guard accessibilityTrusted else {

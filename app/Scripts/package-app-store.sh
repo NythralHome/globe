@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION="${GLOBE_VERSION:-0.1.0}"
-BUILD_NUMBER="${GLOBE_BUILD:-37}"
+BUILD_NUMBER="${GLOBE_BUILD:-38}"
 DIST_DIR="$APP_DIR/.build/app-store"
 PKG_PATH="$DIST_DIR/Globe-$VERSION-$BUILD_NUMBER-mas.pkg"
 STAGING_DIR="${TMPDIR:-/tmp}/globe-mas-package"

@@ -8,6 +8,8 @@ public struct GlobeSettings: Codable, Equatable, Sendable {
     public var hasCompletedOnboarding: Bool
     public var timing: GlobePressTiming
     public var mapping: CodableGlobeActionMapping
+    public var appStoreShortcut: CodableKeyboardShortcut
+    public var appStoreInputSourceShortcuts: [String: CodableKeyboardShortcut]
 
     public init(
         isEnabled: Bool = true,
@@ -16,7 +18,9 @@ public struct GlobeSettings: Codable, Equatable, Sendable {
         showSwitchingHUD: Bool = true,
         hasCompletedOnboarding: Bool = false,
         timing: GlobePressTiming = GlobePressTiming(),
-        mapping: CodableGlobeActionMapping = CodableGlobeActionMapping()
+        mapping: CodableGlobeActionMapping = CodableGlobeActionMapping(),
+        appStoreShortcut: CodableKeyboardShortcut = .controlOptionZ,
+        appStoreInputSourceShortcuts: [String: CodableKeyboardShortcut] = [:]
     ) {
         self.isEnabled = isEnabled
         self.launchAtLogin = launchAtLogin
@@ -25,6 +29,8 @@ public struct GlobeSettings: Codable, Equatable, Sendable {
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.timing = timing
         self.mapping = mapping
+        self.appStoreShortcut = appStoreShortcut
+        self.appStoreInputSourceShortcuts = appStoreInputSourceShortcuts
     }
 }
 
@@ -37,6 +43,8 @@ extension GlobeSettings {
         case hasCompletedOnboarding
         case timing
         case mapping
+        case appStoreShortcut
+        case appStoreInputSourceShortcuts
     }
 
     public init(from decoder: Decoder) throws {
@@ -48,7 +56,59 @@ extension GlobeSettings {
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
         timing = try container.decodeIfPresent(GlobePressTiming.self, forKey: .timing) ?? GlobePressTiming()
         mapping = try container.decodeIfPresent(CodableGlobeActionMapping.self, forKey: .mapping) ?? CodableGlobeActionMapping()
+        appStoreShortcut = try container.decodeIfPresent(CodableKeyboardShortcut.self, forKey: .appStoreShortcut) ?? .controlOptionZ
+        appStoreInputSourceShortcuts = try container.decodeIfPresent([String: CodableKeyboardShortcut].self, forKey: .appStoreInputSourceShortcuts) ?? [:]
     }
+}
+
+public struct CodableKeyboardShortcut: Codable, Equatable, Hashable, Sendable {
+    public var keyCode: UInt32
+    public var modifiers: UInt32
+    public var displayName: String
+
+    public init(keyCode: UInt32, modifiers: UInt32, displayName: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.displayName = displayName
+    }
+
+    public static let controlOptionZ = CodableKeyboardShortcut(
+        keyCode: 6,
+        modifiers: 6144,
+        displayName: "Control-Option-Z"
+    )
+
+    public static let controlOptionG = CodableKeyboardShortcut(
+        keyCode: 5,
+        modifiers: 6144,
+        displayName: "Control-Option-G"
+    )
+
+    public static let commandOptionG = CodableKeyboardShortcut(
+        keyCode: 5,
+        modifiers: 2304,
+        displayName: "Command-Option-G"
+    )
+
+    public static let controlOptionSpace = CodableKeyboardShortcut(
+        keyCode: 49,
+        modifiers: 6144,
+        displayName: "Control-Option-Space"
+    )
+
+    public static let commandOptionSpace = CodableKeyboardShortcut(
+        keyCode: 49,
+        modifiers: 2304,
+        displayName: "Command-Option-Space"
+    )
+
+    public static let appStorePresets: [CodableKeyboardShortcut] = [
+        .controlOptionZ,
+        .controlOptionG,
+        .commandOptionG,
+        .controlOptionSpace,
+        .commandOptionSpace
+    ]
 }
 
 public enum CodableGlobePressAction: Codable, Equatable, Hashable, Sendable {
