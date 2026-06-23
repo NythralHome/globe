@@ -317,7 +317,7 @@ struct OnboardingView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Text("Globe asks macOS for access automatically. If Globe is not listed in Input Monitoring, click +, choose Globe from Applications, turn it on, then restart Globe.")
+                Text("Globe asks macOS for access automatically. After Globe appears in Input Monitoring, turn it on and restart Globe. macOS usually does not apply this permission to an already running app.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

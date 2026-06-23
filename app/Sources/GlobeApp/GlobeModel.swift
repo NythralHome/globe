@@ -471,7 +471,11 @@ final class GlobeModel: ObservableObject {
             inputSourceShortcuts: settings.appStoreInputSourceShortcuts
         )
 
+        #if GLOBE_APP_STORE
         keyboardMonitor.start()
+        #else
+        keyboardMonitor.start(enableEventTap: accessibilityTrusted)
+        #endif
     }
 
     private func stopKeyboardMonitor() {

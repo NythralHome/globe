@@ -36,11 +36,16 @@ final class KeyboardMonitor: @unchecked Sendable {
         appStoreInputSourceShortcuts = inputSourceShortcuts
     }
 
-    func start() {
+    func start(enableEventTap: Bool = true) {
         startHotKeys()
 
         #if !GLOBE_APP_STORE
-        startEventTap()
+        if enableEventTap {
+            startEventTap()
+        } else {
+            DiagnosticLogger.log("KeyboardMonitor.start skipped HID event tap; Input Monitoring is missing")
+            stopEventTap()
+        }
         #endif
     }
 

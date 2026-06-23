@@ -14,7 +14,7 @@ public final class PermissionManager: PermissionManaging {
         #if GLOBE_APP_STORE
         true
         #else
-        CGPreflightListenEventAccess() || Self.probeListenOnlyEventTap()
+        CGPreflightListenEventAccess()
         #endif
     }
 
@@ -27,24 +27,4 @@ public final class PermissionManager: PermissionManaging {
         #endif
     }
 
-    private static func probeListenOnlyEventTap() -> Bool {
-        let mask = CGEventMask(1 << CGEventType.flagsChanged.rawValue)
-        let callback: CGEventTapCallBack = { _, _, event, _ in
-            Unmanaged.passUnretained(event)
-        }
-
-        guard let tap = CGEvent.tapCreate(
-            tap: .cghidEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,
-            eventsOfInterest: mask,
-            callback: callback,
-            userInfo: nil
-        ) else {
-            return false
-        }
-
-        CGEvent.tapEnable(tap: tap, enable: false)
-        return true
-    }
 }
