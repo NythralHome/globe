@@ -45,10 +45,16 @@ final class KeyboardMonitor: @unchecked Sendable {
         }
 
         DiagnosticLogger.log("KeyboardMonitor.start app store hotkeys")
-        var eventType = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
+        var eventTypes = [
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyPressed)
+            ),
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyReleased)
+            )
+        ]
         let target = GetApplicationEventTarget()
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         let handlerStatus = InstallEventHandler(
@@ -74,11 +80,11 @@ final class KeyboardMonitor: @unchecked Sendable {
                 }
 
                 let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(refcon).takeUnretainedValue()
-                monitor.handleAppStoreHotKey(id: hotKeyID.id)
+                monitor.handleAppStoreHotKey(id: hotKeyID.id, eventKind: GetEventKind(event))
                 return noErr
             },
-            1,
-            &eventType,
+            eventTypes.count,
+            &eventTypes,
             refcon,
             &eventHandlerRef
         )
@@ -256,12 +262,16 @@ final class KeyboardMonitor: @unchecked Sendable {
         DiagnosticLogger.log("KeyboardMonitor registered shortcut \(shortcut.displayName) id=\(id)")
     }
 
-    private func handleAppStoreHotKey(id: UInt32) {
+    private func handleAppStoreHotKey(id: UInt32, eventKind: UInt32) {
         guard let action = hotKeyActions[id] else {
             return
         }
 
         if case let .inputSource(sourceID) = action {
+            guard eventKind == UInt32(kEventHotKeyPressed) else {
+                return
+            }
+
             let handler = handler
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
@@ -272,13 +282,21 @@ final class KeyboardMonitor: @unchecked Sendable {
         }
 
         let now = Date()
-        DiagnosticLogger.log("KeyboardMonitor interpreted app store action shortcut")
+        let input: GlobePressInterpreter.Input
+        if eventKind == UInt32(kEventHotKeyPressed) {
+            input = .keyDown(now)
+        } else if eventKind == UInt32(kEventHotKeyReleased) {
+            input = .keyUp(now)
+        } else {
+            return
+        }
+
+        DiagnosticLogger.log("KeyboardMonitor interpreted app store action shortcut eventKind=\(eventKind)")
         let handler = handler
 
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                handler(.press(.keyDown(now)))
-                handler(.press(.keyUp(Date())))
+                handler(.press(input))
             }
         }
     }
