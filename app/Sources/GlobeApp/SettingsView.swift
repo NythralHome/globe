@@ -239,12 +239,11 @@ struct SettingsView: View {
 
     private var actionsTab: some View {
         VStack(alignment: .leading, spacing: 18) {
-            #if GLOBE_APP_STORE
             settingsGroup {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Global shortcut")
                         .font(.headline)
-                    Text("Press the shortcut anywhere to run the action mapping below. Press it repeatedly for double and triple actions.")
+                    Text(globalShortcutDescription)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -261,7 +260,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Direct language shortcuts")
                         .font(.headline)
-                    Text("Assign an optional shortcut to each input source. These shortcuts switch directly to that language.")
+                    Text("Assign an optional shortcut to each input source. If text is selected, Globe Pro also tries to fix wrong-layout text before switching.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -276,7 +275,6 @@ struct SettingsView: View {
                     }
                 }
             }
-            #endif
 
             settingsGroup {
                 SettingsPickerRow(title: "Single press") {
@@ -448,6 +446,14 @@ struct SettingsView: View {
         return "Globe checks GitHub Releases on demand and shows what's new before you download a signed installer."
     }
 
+    private var globalShortcutDescription: String {
+        if AppDistribution.isAppStore {
+            return "Press the shortcut anywhere to run the action mapping below. Press it repeatedly for double and triple actions."
+        }
+
+        return "Globe/Fn remains the Pro main trigger. This optional shortcut runs the same action mapping and supports repeated presses."
+    }
+
     @ViewBuilder
     private var sourceOptions: some View {
         Text("Do nothing").tag(CodableGlobePressAction.none)
@@ -467,7 +473,6 @@ struct SettingsView: View {
         )
     }
 
-    #if GLOBE_APP_STORE
     private func shortcutRow(
         title: String,
         value: String,
@@ -505,7 +510,7 @@ struct SettingsView: View {
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             if isGlobeShortcutAttempt(event) {
                 stopRecordingShortcut()
-                showGlobeProShortcutAlert()
+                showGlobeShortcutAlert()
                 return nil
             }
 
@@ -533,21 +538,28 @@ struct SettingsView: View {
         recordingShortcut = nil
     }
 
-    private func showGlobeProShortcutAlert() {
+    private func showGlobeShortcutAlert() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = "Globe/Fn shortcuts are in Globe Pro"
-        alert.informativeText = """
-        The Mac App Store edition uses standard global shortcuts. Direct Globe/Fn switching, Globe/Fn hold actions, and additional Pro features are available in Globe Pro.
+        if AppDistribution.isAppStore {
+            alert.messageText = "Globe/Fn shortcuts are in Globe Pro"
+            alert.informativeText = """
+            The Mac App Store edition uses standard global shortcuts. Direct Globe/Fn switching, Globe/Fn hold actions, wrong-layout text fixing, and additional Pro features are available in Globe Pro.
 
-        You can view Globe Pro on the Nythral Globe website.
-        """
-        alert.addButton(withTitle: "View Globe Pro")
-        alert.addButton(withTitle: "Not Now")
+            You can view Globe Pro on the Nythral Globe website.
+            """
+            alert.addButton(withTitle: "View Globe Pro")
+            alert.addButton(withTitle: "Not Now")
 
-        if alert.runModal() == .alertFirstButtonReturn {
-            model.openWebsite()
+            if alert.runModal() == .alertFirstButtonReturn {
+                model.openWebsite()
+            }
+        } else {
+            alert.messageText = "Globe/Fn is already the Pro trigger"
+            alert.informativeText = "Use the Key Actions mapping below to choose what Globe/Fn does. The shortcut field is for additional keyboard combinations like Control-1 or Control-Option-Z."
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
     }
 
@@ -636,7 +648,6 @@ struct SettingsView: View {
 
         return event.charactersIgnoringModifiers?.uppercased()
     }
-    #endif
 
     private var longPressBinding: Binding<CodableGlobePressAction> {
         Binding(

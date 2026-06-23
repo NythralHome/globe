@@ -17,6 +17,7 @@ final class GlobeModel: ObservableObject {
     private let permissionManager: PermissionManaging
     private let inputSourceManager: InputSourceManaging
     private let hudController = HUDController()
+    private let textLayoutFixer = TextLayoutFixer()
     private let launchAtLoginManager = LaunchAtLoginManager()
     private var pressInterpreter: GlobePressInterpreter
     private var pendingTimer: Timer?
@@ -91,12 +92,13 @@ final class GlobeModel: ObservableObject {
         #else
         let isTrusted = permissionManager.requestAccessibilityPermission()
         DiagnosticLogger.log("requestAccessibilityPermission returned=\(isTrusted)")
-        if !isTrusted {
-            keyboardMonitor.start()
-        }
         refreshSystemState()
         DiagnosticLogger.log("requestAccessibilityPermission afterRefresh accessibilityTrusted=\(accessibilityTrusted)")
         startKeyboardMonitor()
+
+        if !accessibilityTrusted {
+            SystemSettingsOpener.openAccessibility()
+        }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self else { return }
@@ -105,6 +107,8 @@ final class GlobeModel: ObservableObject {
             DiagnosticLogger.log("requestAccessibilityPermission delayedRefresh accessibilityTrusted=\(accessibilityTrusted)")
             if accessibilityTrusted {
                 startKeyboardMonitor()
+            } else {
+                SystemSettingsOpener.openAccessibility()
             }
         }
         #endif
@@ -379,34 +383,59 @@ final class GlobeModel: ObservableObject {
         case let .press(input):
             handlePressInput(input)
         case let .inputSource(id):
-            perform(.inputSource(id: id))
+            switchDirectlyToInputSource(id: id, fixingSelectedText: true)
         }
     }
 
     private func perform(_ action: GlobePressAction) {
         switch action {
         case let .inputSource(id):
-            guard let selectedSource = inputSources.first(where: { $0.id == id }) else {
-                DiagnosticLogger.log("perform inputSource failed; source not found id=\(id)")
-                return
-            }
-
-            do {
-                try inputSourceManager.selectInputSource(id: id)
-                DiagnosticLogger.log("perform inputSource selected id=\(id) name=\(selectedSource.localizedName)")
-            } catch {
-                DiagnosticLogger.log("perform inputSource failed id=\(id) error=\(error)")
-            }
-            refreshSystemState()
-            if settings.showSwitchingHUD {
-                hudController.show(text: selectedSource.localizedName)
-            }
+            switchDirectlyToInputSource(id: id, fixingSelectedText: false)
         case .openSettings:
             showSettingsWindow()
         case .showInputSourcePicker:
             break
         case .none:
             break
+        }
+    }
+
+    private func switchDirectlyToInputSource(id: String, fixingSelectedText: Bool) {
+        guard let selectedSource = inputSources.first(where: { $0.id == id }) else {
+            DiagnosticLogger.log("perform inputSource failed; source not found id=\(id)")
+            return
+        }
+
+        if fixingSelectedText {
+            textLayoutFixer.fixSelectedText(targetSource: selectedSource) { [weak self] result in
+                Task { @MainActor in
+                    switch result {
+                    case let .fixed(text):
+                        DiagnosticLogger.log("Fixed selected text as \(selectedSource.localizedName) length=\(text.count)")
+                    case .noSelection:
+                        DiagnosticLogger.log("Fix selected text skipped; no text selection")
+                    case let .failed(message):
+                        DiagnosticLogger.log("Fix selected text failed: \(message)")
+                    }
+
+                    self?.selectInputSource(selectedSource)
+                }
+            }
+        } else {
+            selectInputSource(selectedSource)
+        }
+    }
+
+    private func selectInputSource(_ selectedSource: InputSource) {
+        do {
+            try inputSourceManager.selectInputSource(id: selectedSource.id)
+            DiagnosticLogger.log("perform inputSource selected id=\(selectedSource.id) name=\(selectedSource.localizedName)")
+        } catch {
+            DiagnosticLogger.log("perform inputSource failed id=\(selectedSource.id) error=\(error)")
+        }
+        refreshSystemState()
+        if settings.showSwitchingHUD {
+            hudController.show(text: selectedSource.localizedName)
         }
     }
 
@@ -437,19 +466,10 @@ final class GlobeModel: ObservableObject {
             return
         }
 
-        #if GLOBE_APP_STORE
         keyboardMonitor.configureAppStoreShortcuts(
             actionShortcut: settings.appStoreShortcut,
             inputSourceShortcuts: settings.appStoreInputSourceShortcuts
         )
-        #endif
-
-        #if !GLOBE_APP_STORE
-        guard accessibilityTrusted else {
-            DiagnosticLogger.log("KeyboardMonitor.start skipped; Accessibility permission is missing")
-            return
-        }
-        #endif
 
         keyboardMonitor.start()
     }

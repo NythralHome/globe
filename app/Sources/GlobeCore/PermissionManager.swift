@@ -23,10 +23,7 @@ public final class PermissionManager: PermissionManaging {
         #if GLOBE_APP_STORE
         true
         #else
-        _ = Self.probeListenOnlyEventTap()
-        let isTrusted = CGRequestListenEventAccess()
-        _ = Self.probeListenOnlyEventTap()
-        return isTrusted
+        CGRequestListenEventAccess()
         #endif
     }
 

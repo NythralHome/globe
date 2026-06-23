@@ -10,12 +10,13 @@ enum KeyboardTrigger: Sendable {
 }
 
 final class KeyboardMonitor: @unchecked Sendable {
-    #if GLOBE_APP_STORE
     private var hotKeyRefs: [EventHotKeyRef] = []
     private var eventHandlerRef: EventHandlerRef?
     private var appStoreShortcut: CodableKeyboardShortcut = .controlOptionZ
     private var appStoreInputSourceShortcuts: [String: CodableKeyboardShortcut] = [:]
     private var hotKeyActions: [UInt32: KeyboardTrigger] = [:]
+    private var hotKeysAreStarted = false
+    #if GLOBE_APP_STORE
     #else
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -27,7 +28,6 @@ final class KeyboardMonitor: @unchecked Sendable {
         self.handler = handler
     }
 
-    #if GLOBE_APP_STORE
     func configureAppStoreShortcuts(
         actionShortcut: CodableKeyboardShortcut,
         inputSourceShortcuts: [String: CodableKeyboardShortcut]
@@ -35,16 +35,30 @@ final class KeyboardMonitor: @unchecked Sendable {
         appStoreShortcut = actionShortcut
         appStoreInputSourceShortcuts = inputSourceShortcuts
     }
-    #endif
 
     func start() {
-        #if GLOBE_APP_STORE
-        guard hotKeyRefs.isEmpty else {
-            DiagnosticLogger.log("KeyboardMonitor.start ignored; app store hotkey already exists")
+        startHotKeys()
+
+        #if !GLOBE_APP_STORE
+        startEventTap()
+        #endif
+    }
+
+    func stop() {
+        DiagnosticLogger.log("KeyboardMonitor.stop")
+        stopHotKeys()
+        #if !GLOBE_APP_STORE
+        stopEventTap()
+        #endif
+    }
+
+    private func startHotKeys() {
+        guard !hotKeysAreStarted else {
+            DiagnosticLogger.log("KeyboardMonitor.start ignored; hotkeys already exist")
             return
         }
 
-        DiagnosticLogger.log("KeyboardMonitor.start app store hotkeys")
+        DiagnosticLogger.log("KeyboardMonitor.start hotkeys")
         var eventTypes = [
             EventTypeSpec(
                 eventClass: OSType(kEventClassKeyboard),
@@ -100,7 +114,23 @@ final class KeyboardMonitor: @unchecked Sendable {
             removeAppStoreEventHandler()
             return
         }
-        #else
+
+        hotKeysAreStarted = true
+    }
+
+    private func stopHotKeys() {
+        for hotKeyRef in hotKeyRefs {
+            UnregisterEventHotKey(hotKeyRef)
+        }
+
+        hotKeyRefs = []
+        hotKeyActions = [:]
+        hotKeysAreStarted = false
+        removeAppStoreEventHandler()
+    }
+
+    #if !GLOBE_APP_STORE
+    private func startEventTap() {
         guard eventTap == nil else {
             DiagnosticLogger.log("KeyboardMonitor.start ignored; event tap already exists")
             return
@@ -149,20 +179,9 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         CGEvent.tapEnable(tap: tap, enable: true)
         DiagnosticLogger.log("KeyboardMonitor.start created HID event tap")
-        #endif
     }
 
-    func stop() {
-        DiagnosticLogger.log("KeyboardMonitor.stop")
-        #if GLOBE_APP_STORE
-        for hotKeyRef in hotKeyRefs {
-            UnregisterEventHotKey(hotKeyRef)
-        }
-
-        hotKeyRefs = []
-        hotKeyActions = [:]
-        removeAppStoreEventHandler()
-        #else
+    private func stopEventTap() {
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
@@ -173,10 +192,8 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         runLoopSource = nil
         eventTap = nil
-        #endif
     }
 
-    #if !GLOBE_APP_STORE
     private func enableEventTap() {
         guard let eventTap else {
             return
@@ -216,7 +233,6 @@ final class KeyboardMonitor: @unchecked Sendable {
     }
     #endif
 
-    #if GLOBE_APP_STORE
     private static let hotKeySignature = OSType(0x474C4245)
     private static let actionHotKeyID: UInt32 = 1
 
@@ -308,5 +324,4 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         eventHandlerRef = nil
     }
-    #endif
 }

@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$APP_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.15}"
+VERSION="${GLOBE_VERSION:-0.1.0-beta.16}"
 BUILD_DIR="$APP_DIR/.build"
 BUNDLE_DIR="$BUILD_DIR/bundles/Globe.app"
 DIST_DIR="$BUILD_DIR/dist"
