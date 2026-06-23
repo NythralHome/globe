@@ -502,7 +502,17 @@ struct SettingsView: View {
     private func startRecordingShortcut(_ target: RecordingShortcutTarget) {
         stopRecordingShortcut()
         recordingShortcut = target
-        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
+            if isGlobeShortcutAttempt(event) {
+                stopRecordingShortcut()
+                showGlobeProShortcutAlert()
+                return nil
+            }
+
+            guard event.type == .keyDown else {
+                return nil
+            }
+
             guard let shortcut = makeShortcut(from: event) else {
                 NSSound.beep()
                 return nil
@@ -521,6 +531,24 @@ struct SettingsView: View {
 
         shortcutMonitor = nil
         recordingShortcut = nil
+    }
+
+    private func showGlobeProShortcutAlert() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Globe/Fn shortcuts are in Globe Pro"
+        alert.informativeText = """
+        The Mac App Store edition uses standard global shortcuts. Direct Globe/Fn switching, Globe/Fn hold actions, and additional Pro features are available in Globe Pro.
+
+        You can view Globe Pro on the Nythral Globe website.
+        """
+        alert.addButton(withTitle: "View Globe Pro")
+        alert.addButton(withTitle: "Not Now")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            model.openWebsite()
+        }
     }
 
     private func applyShortcut(_ shortcut: CodableKeyboardShortcut, target: RecordingShortcutTarget) {
@@ -558,6 +586,10 @@ struct SettingsView: View {
             modifiers: modifiers,
             displayName: "\(modifierDisplayName(from: event.modifierFlags))-\(keyName)"
         )
+    }
+
+    private func isGlobeShortcutAttempt(_ event: NSEvent) -> Bool {
+        event.keyCode == 63 || event.modifierFlags.contains(.function)
     }
 
     private func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {

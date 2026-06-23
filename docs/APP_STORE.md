@@ -10,7 +10,7 @@ Globe has two distribution flavors from the same `main` branch.
 - Bundle ID: `com.nythral.globe`
 - App Store Connect Apple ID: `6781046732`
 - App Store package script: `app/Scripts/package-app-store.sh`
-- Current package path: `app/.build/app-store/Globe-0.1.0-39-mas.pkg`
+- Current package path: `app/.build/app-store/Globe-0.1.0-40-mas.pkg`
 - App Store build flag: `GLOBE_DISTRIBUTION=app-store`
 
 ## App Store Behavior
@@ -21,6 +21,7 @@ The App Store build is sandboxed and avoids Accessibility-only APIs for non-acce
 - Users can change the main action shortcut in Settings.
 - Single, double, and triple presses of the main shortcut map to configured input sources.
 - Users can also assign direct shortcuts to individual input sources, such as `Control-1` for one language and `Control-2` for another.
+- If a user tries to record Globe/Fn as a shortcut, the app explains that direct Globe/Fn switching is a Globe Pro feature outside the Mac App Store.
 - Launch at Login is never enabled automatically; it is controlled only by an explicit user toggle.
 - Updates are handled by the Mac App Store.
 - The app does not record typed text, inspect character key presses, or transmit keyboard data.
@@ -40,7 +41,7 @@ Build a sandboxed App Store bundle:
 
 ```sh
 cd app
-GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=39 Scripts/build-app-bundle.sh
+GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=40 Scripts/build-app-bundle.sh
 ```
 
 Build the App Store upload package:
@@ -50,7 +51,7 @@ cd app
 Scripts/package-app-store.sh
 ```
 
-The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=39`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`.
+The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=40`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`.
 
 ## Suggested Review Notes
 
