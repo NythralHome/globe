@@ -33,16 +33,12 @@ struct GlobeMenu: View {
             model.openKeyboardSettings()
         }
 
-        Toggle("Launch at Login", isOn: launchAtLoginBinding)
+        Toggle("Start When Signing In", isOn: launchAtLoginBinding)
 
         Divider()
 
         Button("Report a Problem") {
             model.reportIssue()
-        }
-
-        Button("Export Diagnostics") {
-            model.exportDiagnostics()
         }
 
         Button("Open Project Website") {

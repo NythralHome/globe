@@ -145,7 +145,11 @@ struct SettingsView: View {
             settingsGroup {
                 SettingsToggleRow(title: "Enable Globe", isOn: binding(\.isEnabled))
                 SettingsDivider()
-                SettingsToggleRow(title: "Launch at Login", isOn: binding(\.launchAtLogin))
+                SettingsToggleRow(
+                    title: "Start Globe when you sign in",
+                    subtitle: "Open Globe automatically after you log in to macOS. Off by default.",
+                    isOn: binding(\.launchAtLogin)
+                )
                 SettingsDivider()
                 SettingsToggleRow(title: "Show menu bar icon", isOn: binding(\.showMenuBarIcon))
                 SettingsDivider()
@@ -431,9 +435,6 @@ struct SettingsView: View {
                             model.reportIssue()
                         }
 
-                        Button("Export Diagnostics") {
-                            model.exportDiagnostics()
-                        }
                     }
                 }
             }
@@ -779,11 +780,20 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
 
 private struct SettingsToggleRow: View {
     let title: String
+    var subtitle: String? = nil
     @Binding var isOn: Bool
 
     var body: some View {
-        HStack {
-            Text(title)
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             Spacer()
             Toggle(title, isOn: $isOn)
                 .labelsHidden()

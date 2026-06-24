@@ -173,29 +173,6 @@ final class GlobeModel: ObservableObject {
         lastGlobeKeyTestEvent = AppDistribution.capturesGlobeKey ? "Press Globe/Fn to test key detection." : "Press your shortcut to test detection."
     }
 
-    func exportDiagnostics() {
-        refreshSystemState()
-
-        let savePanel = NSSavePanel()
-        savePanel.title = "Export Globe Diagnostics"
-        savePanel.nameFieldStringValue = "Globe-Diagnostics-\(Self.diagnosticsTimestamp()).txt"
-        savePanel.allowedContentTypes = [.plainText]
-        savePanel.canCreateDirectories = true
-
-        guard savePanel.runModal() == .OK, let url = savePanel.url else {
-            return
-        }
-
-        do {
-            try diagnosticsReport().write(to: url, atomically: true, encoding: .utf8)
-            DiagnosticLogger.log("Exported diagnostics to \(url.path)")
-            NSWorkspace.shared.activateFileViewerSelecting([url])
-        } catch {
-            DiagnosticLogger.log("Failed to export diagnostics: \(error.localizedDescription)")
-            showDiagnosticsExportError(error)
-        }
-    }
-
     func checkForUpdates() {
         guard AppDistribution.usesInAppUpdates else {
             showAppStoreUpdateInformation()
@@ -217,12 +194,6 @@ final class GlobeModel: ObservableObject {
                 }
             }
         }
-    }
-
-    func enableLaunchAtLogin() {
-        settings.launchAtLogin = true
-        saveSettings()
-        refreshSystemState()
     }
 
     func completeOnboarding() {
@@ -657,67 +628,6 @@ final class GlobeModel: ObservableObject {
         if alert.runModal() == .alertSecondButtonReturn {
             NSWorkspace.shared.open(AppLinks.releases)
         }
-    }
-
-    private func showDiagnosticsExportError(_ error: Error) {
-        NSApplication.shared.activate()
-        let alert = NSAlert()
-        alert.messageText = "Could not export diagnostics"
-        alert.informativeText = error.localizedDescription
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
-
-    private func diagnosticsReport() -> String {
-        let inputSourceLines = inputSources
-            .map { "- \($0.localizedName) (`\($0.id)`)" }
-            .joined(separator: "\n")
-        let mapping = settings.mapping
-
-        let accessLine: String
-        #if GLOBE_APP_STORE
-        accessLine = "Keyboard monitoring: local app events"
-        #else
-        accessLine = "Input Monitoring trusted: \(inputMonitoringTrusted)"
-        #endif
-
-        return """
-        Globe Diagnostics
-        =================
-
-        Generated: \(ISO8601DateFormatter().string(from: Date()))
-        Globe version: \(AppVersion.displayString)
-        macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
-        \(accessLine)
-        Current input source: \(currentInputSourceName)
-        Launch at login: \(settings.launchAtLogin)
-        Globe enabled: \(settings.isEnabled)
-        Show menu bar icon: \(settings.showMenuBarIcon)
-        Show switching HUD: \(settings.showSwitchingHUD)
-        Multi-press timeout: \(settings.timing.multiPressTimeout)
-        Long-press duration: \(settings.timing.longPressDuration)
-
-        Mapping
-        -------
-        Single press: \(mapping.singlePress)
-        Double press: \(mapping.doublePress)
-        Triple press: \(mapping.triplePress)
-        Long press: \(mapping.longPress)
-
-        Installed input sources
-        -----------------------
-        \(inputSourceLines.isEmpty ? "No input sources detected." : inputSourceLines)
-
-        Recent Globe log
-        ----------------
-        \(DiagnosticLogger.recentLog())
-        """
-    }
-
-    private static func diagnosticsTimestamp() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-        return formatter.string(from: Date())
     }
 
     private func updateMessage(for release: ReleaseInfo) -> String {

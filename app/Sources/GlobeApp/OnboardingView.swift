@@ -42,7 +42,7 @@ struct OnboardingView: View {
                 icon: "power",
                 title: "Ready",
                 subtitle: "Globe is ready.",
-                body: "Globe runs quietly in the menu bar. You can choose whether it should launch at login."
+                body: "Globe runs quietly in the menu bar. You can choose whether it should start automatically after you sign in."
             )
         ]
         #else
@@ -94,7 +94,7 @@ struct OnboardingView: View {
                     icon: "power",
                     title: "Ready",
                     subtitle: "Globe is ready.",
-                    body: "Globe runs quietly in the menu bar. You can choose whether it should launch at login."
+                    body: "Globe runs quietly in the menu bar. You can choose whether it should start automatically after you sign in."
                 )
             ]
         )
@@ -251,7 +251,11 @@ struct OnboardingView: View {
             .frame(maxWidth: 420)
         case .ready:
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Launch Globe at login", isOn: launchAtLoginBinding)
+                Toggle("Start Globe when you sign in", isOn: launchAtLoginBinding)
+                Text("When enabled, Globe opens automatically after you log in to macOS. You can leave this off and start Globe manually from Applications.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 Toggle("Show switching HUD", isOn: showHUDBinding)
                 Toggle("Enable Globe", isOn: enabledBinding)
             }
