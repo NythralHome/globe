@@ -22,7 +22,9 @@ final class GlobeModel: ObservableObject {
     private let permissionManager: PermissionManaging
     private let inputSourceManager: InputSourceManaging
     private let hudController = HUDController()
+    #if !GLOBE_APP_STORE
     private let textLayoutFixer = TextLayoutFixer()
+    #endif
     private let launchAtLoginManager = LaunchAtLoginManager()
     private var pressInterpreter: GlobePressInterpreter
     private var pendingPressWorkItem: DispatchWorkItem?
@@ -388,7 +390,11 @@ final class GlobeModel: ObservableObject {
         case let .press(input):
             handlePressInput(input)
         case let .inputSource(id):
+            #if GLOBE_APP_STORE
+            switchDirectlyToInputSource(id: id, fixingSelectedText: false)
+            #else
             switchDirectlyToInputSource(id: id, fixingSelectedText: true)
+            #endif
         }
     }
 
@@ -411,6 +417,9 @@ final class GlobeModel: ObservableObject {
             return
         }
 
+        #if GLOBE_APP_STORE
+        selectInputSource(selectedSource)
+        #else
         if fixingSelectedText {
             textLayoutFixer.fixSelectedText(targetSource: selectedSource) { [weak self] result in
                 Task { @MainActor in
@@ -429,6 +438,7 @@ final class GlobeModel: ObservableObject {
         } else {
             selectInputSource(selectedSource)
         }
+        #endif
     }
 
     private func selectInputSource(_ selectedSource: InputSource) {

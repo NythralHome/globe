@@ -304,10 +304,17 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Direct language shortcuts")
                         .font(.headline)
+                    #if GLOBE_APP_STORE
+                    Text("Assign an optional shortcut to each input source.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    #else
                     Text("Assign an optional shortcut to each input source. If text is selected, Globe Pro also tries to fix wrong-layout text before switching.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    #endif
 
                     ForEach(model.inputSources) { source in
                         shortcutRow(
@@ -555,7 +562,7 @@ struct SettingsView: View {
         if AppDistribution.isAppStore {
             alert.messageText = "Globe/Fn shortcuts are in Globe Pro"
             alert.informativeText = """
-            The Mac App Store edition uses standard global shortcuts. Direct Globe/Fn switching, Globe/Fn hold actions, wrong-layout text fixing, and additional Pro features are available in Globe Pro.
+            The Mac App Store edition uses standard global shortcuts. Direct Globe/Fn switching, Globe/Fn hold actions, and additional Pro features are available in Globe Pro.
 
             You can view Globe Pro on the Nythral Globe website.
             """

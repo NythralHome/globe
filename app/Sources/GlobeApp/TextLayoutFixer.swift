@@ -3,6 +3,7 @@ import CoreGraphics
 import Foundation
 import GlobeCore
 
+#if !GLOBE_APP_STORE
 enum TextLayoutFixResult {
     case fixed(String)
     case noSelection
@@ -150,3 +151,4 @@ private enum KeyboardLayoutConverter {
         }
     }
 }
+#endif
