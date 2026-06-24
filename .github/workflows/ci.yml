@@ -16,5 +16,11 @@ jobs:
       - name: Test
         run: swift test --package-path app
 
-      - name: Build app bundle
+      - name: Build app bundle (direct)
         run: app/Scripts/build-app-bundle.sh
+
+      - name: Compile App Store flavor
+        # The App Store binary is sandboxed and excludes the global HID code via
+        # -DGLOBE_APP_STORE. Compile it here so a change that builds for the direct
+        # channel but breaks the sandboxed channel fails CI instead of release.
+        run: swift build --package-path app -c release -Xswiftc -DGLOBE_APP_STORE

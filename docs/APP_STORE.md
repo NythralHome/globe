@@ -37,21 +37,36 @@ The Pro build is distributed outside the Mac App Store as a signed and notarized
 
 ## Build
 
+Versions and build numbers live in one place: `app/Scripts/version.sh`. The App
+Store channel reads `GLOBE_DEFAULT_APPSTORE_VERSION` / `GLOBE_DEFAULT_APPSTORE_BUILD`
+from there; override per build with the `GLOBE_VERSION` / `GLOBE_BUILD` env vars.
+
 Build a sandboxed App Store bundle:
 
 ```sh
 cd app
-GLOBE_DISTRIBUTION=app-store GLOBE_VERSION=0.1.0 GLOBE_BUILD=40 Scripts/build-app-bundle.sh
+make build-appstore
 ```
 
-Build the App Store upload package:
+Build the App Store upload package (signs with Apple Distribution + installer
+identity derived from the provisioning profile):
 
 ```sh
 cd app
-Scripts/package-app-store.sh
+make package-appstore
 ```
 
-The App Store package uses `CFBundleShortVersionString=0.1.0` and `CFBundleVersion=40`. Keep beta labels in App Store/TestFlight metadata, not in `CFBundleShortVersionString`.
+Before committing, compile both channels so a change that builds for direct but
+breaks the sandboxed App Store binary is caught locally (CI runs the same gate):
+
+```sh
+cd app
+make check
+```
+
+Keep beta labels in App Store/TestFlight metadata, not in
+`CFBundleShortVersionString`. `CFBundleVersion` must strictly increase with every
+upload to App Store Connect.
 
 ## Suggested Review Notes
 

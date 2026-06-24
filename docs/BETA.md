@@ -14,20 +14,20 @@ Globe beta builds are distributed as signed, notarized macOS PKG installers thro
 
 Globe needs two manual macOS steps:
 
-1. System Settings > Privacy & Security > Accessibility
+1. System Settings > Privacy & Security > Input Monitoring
    - Add `Globe.app` from `/Applications`.
    - Enable Globe.
 2. System Settings > Keyboard
    - Set `Press Globe key to` to `Do Nothing`.
 
-These steps are required because Globe does not use private Apple APIs and macOS does not allow apps to silently grant Accessibility permission.
+These steps are required because Globe does not use private Apple APIs and macOS does not allow apps to silently grant Input Monitoring permission. Globe observes only the Globe/Fn key state through Input Monitoring; it does not request Accessibility.
 
 ## Confirm It Works
 
 Open Globe > Settings > Permissions and use `Test Globe key`.
 
 - If the status updates when you press Globe/Fn, Globe can observe the key.
-- If it does not update, check Accessibility permission and confirm the app is installed in `/Applications`.
+- If it does not update, check Input Monitoring permission and confirm the app is installed in `/Applications`.
 
 ## Updates
 

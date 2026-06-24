@@ -3,8 +3,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.24}"
-BUILD_NUMBER="${GLOBE_BUILD:-1}"
+# shellcheck source=version.sh
+source "$SCRIPT_DIR/version.sh"
+VERSION="${GLOBE_VERSION:-$GLOBE_DEFAULT_VERSION}"
+BUILD_NUMBER="${GLOBE_BUILD:-$GLOBE_DEFAULT_BUILD}"
 DISPLAY_NAME="${GLOBE_DISPLAY_NAME:-Globe}"
 DISTRIBUTION="${GLOBE_DISTRIBUTION:-developer-id}"
 BUNDLE_ID="${GLOBE_BUNDLE_ID:-dev.nythral.globe}"
@@ -114,12 +116,9 @@ if [[ -n "$PROVISIONING_PROFILE" ]]; then
     cp "$PROVISIONING_PROFILE" "$CONTENTS_DIR/embedded.provisionprofile"
 fi
 
-ACCESSIBILITY_USAGE_PLIST=""
-if [[ "$DISTRIBUTION" != "app-store" ]]; then
-    ACCESSIBILITY_USAGE_PLIST='
-    <key>NSAccessibilityUsageDescription</key>
-    <string>Globe needs Input Monitoring permission to observe the Globe/Fn key and switch input sources. It does not record typed text.</string>'
-fi
+# Input Monitoring (kTCCServiceListenEvent) has no Info.plist usage-description
+# key, so no permission string is injected here. The direct build requests access
+# at runtime via IOHIDRequestAccess; the App Store build needs no such permission.
 
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -152,7 +151,6 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <string>public.app-category.utilities</string>
     <key>LSUIElement</key>
     <true/>
-$ACCESSIBILITY_USAGE_PLIST
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>ITSAppUsesNonExemptEncryption</key>

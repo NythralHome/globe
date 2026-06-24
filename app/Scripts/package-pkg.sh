@@ -3,7 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.24}"
+# shellcheck source=version.sh
+source "$SCRIPT_DIR/version.sh"
+VERSION="${GLOBE_VERSION:-$GLOBE_DEFAULT_VERSION}"
 BUILD_DIR="$APP_DIR/.build"
 BUNDLE_DIR="$BUILD_DIR/bundles/Globe.app"
 DIST_DIR="$BUILD_DIR/dist"

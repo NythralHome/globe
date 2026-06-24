@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$APP_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.24}"
+# shellcheck source=version.sh
+source "$SCRIPT_DIR/version.sh"
+VERSION="${GLOBE_VERSION:-$GLOBE_DEFAULT_VERSION}"
 BUILD_DIR="$APP_DIR/.build"
 BUNDLE_DIR="$BUILD_DIR/bundles/Globe.app"
 DIST_DIR="$BUILD_DIR/dist"
@@ -33,7 +35,7 @@ Install:
 1. Drag Globe.app to Applications.
 2. Open Globe.app from Applications.
 3. Complete the welcome setup.
-4. In System Settings > Privacy & Security > Accessibility, add Globe from Applications and enable it.
+4. In System Settings > Privacy & Security > Input Monitoring, add Globe from Applications and enable it.
 5. In System Settings > Keyboard, set "Press Globe key to" to "Do Nothing".
 
 Privacy:
