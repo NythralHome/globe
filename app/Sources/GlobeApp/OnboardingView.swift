@@ -307,7 +307,7 @@ struct OnboardingView: View {
             .foregroundStyle(model.accessibilityTrusted ? .green : .secondary)
 
             if model.accessibilityTrusted {
-                Text("Globe can create the global listen-only keyboard event tap used for Fn/Globe switching. Continue and test Fn outside Globe focus.")
+                Text("Input Monitoring is enabled. Globe can now receive the global Fn/Globe events used for switching outside Globe focus.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {

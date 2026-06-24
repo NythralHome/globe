@@ -217,15 +217,26 @@ final class KeyboardMonitor: @unchecked Sendable {
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         DiagnosticLogger.log("flagsChanged keyCode=\(keyCode) flags=\(event.flags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
 
-        guard hasFunctionFlag != isFunctionKeyPressed else {
+        let isPressed: Bool
+        if keyCode == 63 {
+            isPressed = hasFunctionFlag || !isFunctionKeyPressed
+        } else {
+            guard hasFunctionFlag != isFunctionKeyPressed else {
+                return false
+            }
+
+            isPressed = hasFunctionFlag
+        }
+
+        guard isPressed != isFunctionKeyPressed else {
             return false
         }
 
-        isFunctionKeyPressed = hasFunctionFlag
+        isFunctionKeyPressed = isPressed
 
         let now = Date()
-        let input: GlobePressInterpreter.Input = hasFunctionFlag ? .keyDown(now) : .keyUp(now)
-        DiagnosticLogger.log("KeyboardMonitor interpreted \(hasFunctionFlag ? "keyDown" : "keyUp")")
+        let input: GlobePressInterpreter.Input = isPressed ? .keyDown(now) : .keyUp(now)
+        DiagnosticLogger.log("KeyboardMonitor interpreted \(isPressed ? "keyDown" : "keyUp")")
         let handler = handler
 
         DispatchQueue.main.async {

@@ -171,7 +171,7 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     if model.accessibilityTrusted {
-                        Text("Globe can create the global listen-only keyboard event tap used for Fn/Globe switching. Test Fn below to confirm it works outside Globe focus.")
+                        Text("Input Monitoring is enabled. Globe can now receive the global Fn/Globe events used for switching outside Globe focus.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
