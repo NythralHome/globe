@@ -6,8 +6,10 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var model: GlobeModel
     @State private var selectedTab: SettingsTab = .general
+    #if GLOBE_APP_STORE
     @State private var recordingShortcut: RecordingShortcutTarget?
     @State private var shortcutMonitor: Any?
+    #endif
 
     var body: some View {
         HStack(spacing: 0) {
@@ -31,11 +33,11 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refreshSystemState()
         }
+        #if GLOBE_APP_STORE
         .onDisappear {
-            #if GLOBE_APP_STORE
             stopRecordingShortcut()
-            #endif
         }
+        #endif
     }
 
     private var sidebar: some View {
@@ -482,6 +484,7 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             Text(title)
             Spacer()
+            #if GLOBE_APP_STORE
             Text(recordingShortcut == target ? "Press new shortcut..." : value)
                 .foregroundStyle(recordingShortcut == target ? .blue : .secondary)
                 .lineLimit(1)
@@ -500,10 +503,17 @@ struct SettingsView: View {
                     clearShortcut(target)
                 }
             }
+            #else
+            Text(value)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: 190, alignment: .trailing)
+            #endif
         }
         .font(.system(size: 15))
     }
 
+    #if GLOBE_APP_STORE
     private func startRecordingShortcut(_ target: RecordingShortcutTarget) {
         stopRecordingShortcut()
         recordingShortcut = target
@@ -648,6 +658,7 @@ struct SettingsView: View {
 
         return event.charactersIgnoringModifiers?.uppercased()
     }
+    #endif
 
     private var longPressBinding: Binding<CodableGlobePressAction> {
         Binding(
