@@ -7,9 +7,14 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class GlobeModel: ObservableObject {
+    // The single, app-wide instance. GlobeModel.init starts a global HID monitor,
+    // so there must only ever be one; see GlobeApp for why @StateObject can
+    // otherwise create throwaway instances.
+    static let shared = GlobeModel()
+
     @Published var settings: GlobeSettings
     @Published private(set) var currentInputSourceName = "Unknown"
-    @Published private(set) var accessibilityTrusted = false
+    @Published private(set) var inputMonitoringTrusted = false
     @Published private(set) var inputSources: [InputSource] = []
     @Published private(set) var lastGlobeKeyTestEvent = "Press Globe/Fn to test key detection."
 
@@ -74,56 +79,56 @@ final class GlobeModel: ObservableObject {
     }
 
     func refreshSystemState() {
-        accessibilityTrusted = permissionManager.isAccessibilityTrusted
+        inputMonitoringTrusted = permissionManager.isInputMonitoringTrusted
         inputSources = inputSourceManager.availableInputSources()
         currentInputSourceName = inputSourceManager.currentInputSource()?.localizedName ?? "Unknown"
         settings.launchAtLogin = launchAtLoginManager.isEnabled
         #if GLOBE_APP_STORE
         DiagnosticLogger.log("refreshSystemState current=\(currentInputSourceName) sources=\(inputSources.map(\.localizedName).joined(separator: ","))")
         #else
-        DiagnosticLogger.log("refreshSystemState accessibilityTrusted=\(accessibilityTrusted) current=\(currentInputSourceName) sources=\(inputSources.map(\.localizedName).joined(separator: ","))")
+        DiagnosticLogger.log("refreshSystemState inputMonitoringTrusted=\(inputMonitoringTrusted) current=\(currentInputSourceName) sources=\(inputSources.map(\.localizedName).joined(separator: ","))")
         #endif
     }
 
-    func requestAccessibilityPermission() {
+    func requestInputMonitoringPermission() {
         #if GLOBE_APP_STORE
         refreshSystemState()
         startKeyboardMonitor()
         #else
-        let isTrusted = permissionManager.requestAccessibilityPermission()
-        DiagnosticLogger.log("requestAccessibilityPermission returned=\(isTrusted)")
+        let isTrusted = permissionManager.requestInputMonitoringPermission()
+        DiagnosticLogger.log("requestInputMonitoringPermission returned=\(isTrusted)")
         refreshSystemState()
-        DiagnosticLogger.log("requestAccessibilityPermission afterRefresh accessibilityTrusted=\(accessibilityTrusted)")
+        DiagnosticLogger.log("requestInputMonitoringPermission afterRefresh inputMonitoringTrusted=\(inputMonitoringTrusted)")
         startKeyboardMonitor()
 
-        if !accessibilityTrusted {
-            SystemSettingsOpener.openAccessibility()
+        if !inputMonitoringTrusted {
+            SystemSettingsOpener.openInputMonitoring()
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self else { return }
 
             refreshSystemState()
-            DiagnosticLogger.log("requestAccessibilityPermission delayedRefresh accessibilityTrusted=\(accessibilityTrusted)")
-            if accessibilityTrusted {
+            DiagnosticLogger.log("requestInputMonitoringPermission delayedRefresh inputMonitoringTrusted=\(inputMonitoringTrusted)")
+            if inputMonitoringTrusted {
                 startKeyboardMonitor()
             } else {
-                SystemSettingsOpener.openAccessibility()
+                SystemSettingsOpener.openInputMonitoring()
             }
         }
         #endif
     }
 
-    func beginAccessibilitySetup() {
-        requestAccessibilityPermission()
+    func beginInputMonitoringSetup() {
+        requestInputMonitoringPermission()
     }
 
     func revealAppInFinder() {
         NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
     }
 
-    func openAccessibilitySettings() {
-        SystemSettingsOpener.openAccessibility()
+    func openInputMonitoringSettings() {
+        SystemSettingsOpener.openInputMonitoring()
     }
 
     func restartApp() {
@@ -163,7 +168,7 @@ final class GlobeModel: ObservableObject {
     }
 
     func resetGlobeKeyTest() {
-        lastGlobeKeyTestEvent = AppDistribution.isAppStore ? "Press your shortcut to test detection." : "Press Globe/Fn to test key detection."
+        lastGlobeKeyTestEvent = AppDistribution.capturesGlobeKey ? "Press Globe/Fn to test key detection." : "Press your shortcut to test detection."
     }
 
     func exportDiagnostics() {
@@ -190,7 +195,7 @@ final class GlobeModel: ObservableObject {
     }
 
     func checkForUpdates() {
-        if AppDistribution.isAppStore {
+        guard AppDistribution.usesInAppUpdates else {
             showAppStoreUpdateInformation()
             return
         }
@@ -474,7 +479,7 @@ final class GlobeModel: ObservableObject {
         #if GLOBE_APP_STORE
         keyboardMonitor.start()
         #else
-        keyboardMonitor.start(enableEventTap: accessibilityTrusted)
+        keyboardMonitor.start()
         #endif
     }
 
@@ -663,7 +668,7 @@ final class GlobeModel: ObservableObject {
         #if GLOBE_APP_STORE
         accessLine = "Keyboard monitoring: local app events"
         #else
-        accessLine = "Accessibility trusted: \(accessibilityTrusted)"
+        accessLine = "Input Monitoring trusted: \(inputMonitoringTrusted)"
         #endif
 
         return """

@@ -16,14 +16,16 @@ let package = Package(
             name: "GlobeCore",
             linkerSettings: [
                 .linkedFramework("ApplicationServices"),
-                .linkedFramework("Carbon")
+                .linkedFramework("Carbon"),
+                .linkedFramework("IOKit")
             ]
         ),
         .executableTarget(
             name: "GlobeApp",
             dependencies: ["GlobeCore"],
             linkerSettings: [
-                .linkedFramework("Carbon")
+                .linkedFramework("Carbon"),
+                .linkedFramework("IOKit")
             ]
         ),
         .testTarget(

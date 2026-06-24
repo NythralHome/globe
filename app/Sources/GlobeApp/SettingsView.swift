@@ -99,16 +99,16 @@ struct SettingsView: View {
         EmptyView()
         #else
         Label(
-            model.accessibilityTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
-            systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
+            model.inputMonitoringTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
+            systemImage: model.inputMonitoringTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
         )
         .font(.caption)
-        .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
+        .foregroundStyle(model.inputMonitoringTrusted ? .green : .orange)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            (model.accessibilityTrusted ? Color.green : Color.orange).opacity(0.12),
+            (model.inputMonitoringTrusted ? Color.green : Color.orange).opacity(0.12),
             in: RoundedRectangle(cornerRadius: 8)
         )
         #endif
@@ -163,22 +163,22 @@ struct SettingsView: View {
                 HStack {
                     Text("Fn/Globe monitoring")
                     Spacer()
-                    Text(model.accessibilityTrusted ? "Ready" : "Needed")
+                    Text(model.inputMonitoringTrusted ? "Ready" : "Needed")
                         .fontWeight(.medium)
-                        .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
+                        .foregroundStyle(model.inputMonitoringTrusted ? .green : .orange)
                 }
                 .font(.system(size: 15))
 
                 SettingsDivider()
 
                 VStack(alignment: .leading, spacing: 10) {
-                    if model.accessibilityTrusted {
+                    if model.inputMonitoringTrusted {
                         Text("Input Monitoring is enabled. Globe can now receive the global Fn/Globe events used for switching outside Globe focus.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
                         Button("Request Input Monitoring") {
-                            model.beginAccessibilitySetup()
+                            model.beginInputMonitoringSetup()
                         }
                         .buttonStyle(.borderedProminent)
 

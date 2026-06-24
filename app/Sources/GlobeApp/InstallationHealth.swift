@@ -25,7 +25,7 @@ enum InstallationHealth {
             """
             #else
             alert.informativeText = """
-            macOS is running Globe from a temporary protected location. This can make Accessibility permission unreliable.
+            macOS is running Globe from a temporary protected location. This can make Input Monitoring permission unreliable.
 
             Quit Globe, open the installer again, drag Globe.app to Applications, then launch it from Applications.
             """

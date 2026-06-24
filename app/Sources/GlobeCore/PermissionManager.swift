@@ -1,50 +1,57 @@
-import CoreGraphics
 import Foundation
+import IOKit.hid
+import IOKit.hidsystem
 
 public protocol PermissionManaging {
-    var isAccessibilityTrusted: Bool { get }
+    var isInputMonitoringTrusted: Bool { get }
     @discardableResult
-    func requestAccessibilityPermission() -> Bool
+    func requestInputMonitoringPermission() -> Bool
 }
 
 public final class PermissionManager: PermissionManaging {
     public init() {}
 
-    public var isAccessibilityTrusted: Bool {
+    public var isInputMonitoringTrusted: Bool {
         #if GLOBE_APP_STORE
         true
         #else
-        CGPreflightListenEventAccess() || Self.canCreateListenOnlyHIDEventTap()
+        IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+            || Self.canOpenHIDManager()
         #endif
     }
 
     @discardableResult
-    public func requestAccessibilityPermission() -> Bool {
+    public func requestInputMonitoringPermission() -> Bool {
         #if GLOBE_APP_STORE
         true
         #else
-        CGRequestListenEventAccess()
+        let hidTrusted = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+        let hidManagerTrusted = Self.canOpenHIDManager()
+        return hidTrusted || hidManagerTrusted
         #endif
     }
 
-    private static func canCreateListenOnlyHIDEventTap() -> Bool {
-        let mask = CGEventMask(1 << CGEventType.flagsChanged.rawValue)
-        let callback: CGEventTapCallBack = { _, _, event, _ in
-            Unmanaged.passUnretained(event)
+    private static func canOpenHIDManager() -> Bool {
+        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerSetDeviceMatchingMultiple(manager, [
+            hidMatchingDictionary(usagePage: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_Keyboard),
+            hidMatchingDictionary(usagePage: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_Keypad)
+        ] as CFArray)
+
+        let result = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        if result == kIOReturnSuccess {
+            IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+            return true
         }
 
-        guard let tap = CGEvent.tapCreate(
-            tap: .cghidEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,
-            eventsOfInterest: mask,
-            callback: callback,
-            userInfo: nil
-        ) else {
-            return false
-        }
-
-        CGEvent.tapEnable(tap: tap, enable: false)
-        return true
+        return false
     }
+
+    private static func hidMatchingDictionary(usagePage: Int, usage: Int) -> CFDictionary {
+        [
+            kIOHIDDeviceUsagePageKey: usagePage,
+            kIOHIDDeviceUsageKey: usage
+        ] as CFDictionary
+    }
+
 }

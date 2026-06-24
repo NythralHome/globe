@@ -1,8 +1,10 @@
 import AppKit
-import CoreGraphics
 import Foundation
 import GlobeCore
 import Carbon.HIToolbox
+#if !GLOBE_APP_STORE
+import IOKit.hid
+#endif
 
 enum KeyboardTrigger: Sendable {
     case press(GlobePressInterpreter.Input)
@@ -18,17 +20,25 @@ final class KeyboardMonitor: @unchecked Sendable {
     private var hotKeysAreStarted = false
     #if GLOBE_APP_STORE
     #else
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var eventTapRunLoop: CFRunLoop?
-    private var eventTapThread: Thread?
-    private let eventTapLock = NSLock()
+    private var hidManager: IOHIDManager?
+    // The IOHIDManager callback holds a raw pointer back to this object. Retain
+    // self for the lifetime of the registration so the callback can never fire
+    // against freed memory; balanced by release() in stopHIDMonitor.
+    private var hidRetainedSelf: Unmanaged<KeyboardMonitor>?
     #endif
     private var isFunctionKeyPressed = false
     private let handler: @MainActor (KeyboardTrigger) -> Void
 
     init(handler: @escaping @MainActor (KeyboardTrigger) -> Void) {
         self.handler = handler
+    }
+
+    deinit {
+        // The HID callback and Carbon hotkeys hold an unretained pointer back to
+        // this object via the main run loop. If the monitor is deallocated without
+        // unregistering them (e.g. a discarded GlobeModel instance), the next key
+        // event dereferences freed memory and crashes. Tear everything down here.
+        stop()
     }
 
     func configureAppStoreShortcuts(
@@ -44,10 +54,10 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         #if !GLOBE_APP_STORE
         if enableEventTap {
-            startEventTap()
+            startHIDMonitor()
         } else {
-            DiagnosticLogger.log("KeyboardMonitor.start skipped HID event tap; Input Monitoring is missing")
-            stopEventTap()
+            DiagnosticLogger.log("KeyboardMonitor.start skipped HID monitor; Input Monitoring is missing")
+            stopHIDMonitor()
         }
         #endif
     }
@@ -56,7 +66,7 @@ final class KeyboardMonitor: @unchecked Sendable {
         DiagnosticLogger.log("KeyboardMonitor.stop")
         stopHotKeys()
         #if !GLOBE_APP_STORE
-        stopEventTap()
+        stopHIDMonitor()
         #endif
     }
 
@@ -138,177 +148,94 @@ final class KeyboardMonitor: @unchecked Sendable {
     }
 
     #if !GLOBE_APP_STORE
-    private func startEventTap() {
-        eventTapLock.lock()
-        let isAlreadyStarted = eventTapThread != nil || eventTap != nil
-        eventTapLock.unlock()
-
-        guard !isAlreadyStarted else {
-            DiagnosticLogger.log("KeyboardMonitor.start ignored; event tap already exists")
+    private func startHIDMonitor() {
+        guard hidManager == nil else {
+            DiagnosticLogger.log("KeyboardMonitor.start ignored; HID monitor already exists")
             return
         }
 
-        DiagnosticLogger.log("KeyboardMonitor.start event tap thread")
-        let ready = DispatchSemaphore(value: 0)
-        let thread = Thread { [weak self] in
-            self?.runEventTapThread(ready: ready)
-        }
-        thread.name = "Globe HID Event Tap"
+        DiagnosticLogger.log("KeyboardMonitor.start HID monitor")
+        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerSetDeviceMatchingMultiple(manager, [
+            Self.hidMatchingDictionary(usagePage: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_Keyboard),
+            Self.hidMatchingDictionary(usagePage: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_Keypad)
+        ] as CFArray)
 
-        eventTapLock.lock()
-        eventTapThread = thread
-        eventTapLock.unlock()
-
-        thread.start()
-
-        if ready.wait(timeout: .now() + 1.0) == .timedOut {
-            DiagnosticLogger.log("KeyboardMonitor.start event tap thread did not report ready within 1s")
-        }
-    }
-
-    private func runEventTapThread(ready: DispatchSemaphore) {
-        DiagnosticLogger.log("KeyboardMonitor.start")
-        let mask = (1 << CGEventType.flagsChanged.rawValue)
-        let callback: CGEventTapCallBack = { proxy, type, event, refcon in
-            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                if let refcon {
-                    let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(refcon).takeUnretainedValue()
-                    monitor.enableEventTap()
-                }
-                return Unmanaged.passUnretained(event)
-            }
-
-            guard let refcon else {
-                return Unmanaged.passUnretained(event)
-            }
-
-            let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(refcon).takeUnretainedValue()
-            _ = monitor.handle(type: type, event: event)
-
-            return Unmanaged.passUnretained(event)
-        }
-
-        let refcon = Unmanaged.passUnretained(self).toOpaque()
-        guard let tap = CGEvent.tapCreate(
-            tap: .cghidEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,
-            eventsOfInterest: CGEventMask(mask),
-            callback: callback,
-            userInfo: refcon
-        ) else {
-            DiagnosticLogger.log("KeyboardMonitor.start failed; CGEvent.tapCreate returned nil")
-            eventTapLock.lock()
-            eventTapThread = nil
-            eventTapLock.unlock()
-            ready.signal()
-            return
-        }
-
-        let currentRunLoop = CFRunLoopGetCurrent()
-        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-
-        eventTapLock.lock()
-        eventTap = tap
-        runLoopSource = source
-        eventTapRunLoop = currentRunLoop
-        eventTapLock.unlock()
-
-        if let source {
-            CFRunLoopAddSource(currentRunLoop, source, .commonModes)
-        }
-
-        CGEvent.tapEnable(tap: tap, enable: true)
-        DiagnosticLogger.log("KeyboardMonitor.start created HID event tap")
-        ready.signal()
-
-        CFRunLoopRun()
-    }
-
-    private func stopEventTap() {
-        eventTapLock.lock()
-        let runLoop = eventTapRunLoop
-        let source = runLoopSource
-        let tap = eventTap
-        eventTapLock.unlock()
-
-        guard let runLoop else {
-            eventTapLock.lock()
-            runLoopSource = nil
-            eventTap = nil
-            eventTapThread = nil
-            eventTapLock.unlock()
-            return
-        }
-
-        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) { [weak self] in
-            if let source {
-                CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
-            }
-
-            if let tap {
-                CGEvent.tapEnable(tap: tap, enable: false)
-                CFMachPortInvalidate(tap)
-            }
-
-            guard let self else {
-                CFRunLoopStop(CFRunLoopGetCurrent())
+        // IOHIDValueCallback parameters are (context, result, sender, value). The
+        // context is the refcon we registered below; the third parameter is the
+        // sending device, NOT our object. Reading the wrong parameter would
+        // reconstruct a KeyboardMonitor from a device pointer and crash.
+        let callback: IOHIDValueCallback = { context, _, _, value in
+            guard let context else {
                 return
             }
 
-            self.eventTapLock.lock()
-            self.runLoopSource = nil
-            self.eventTap = nil
-            self.eventTapRunLoop = nil
-            self.eventTapThread = nil
-            self.eventTapLock.unlock()
-
-            CFRunLoopStop(CFRunLoopGetCurrent())
+            let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(context).takeUnretainedValue()
+            monitor.handleHIDValue(value)
         }
+        // Retain self for the lifetime of the registration so the callback can
+        // never fire against freed memory; balanced by release() in stopHIDMonitor.
+        let retainedSelf = Unmanaged.passRetained(self)
+        hidRetainedSelf = retainedSelf
+        IOHIDManagerRegisterInputValueCallback(manager, callback, retainedSelf.toOpaque())
+        IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
 
-        CFRunLoopWakeUp(runLoop)
-    }
-
-    private func enableEventTap() {
-        eventTapLock.lock()
-        let tap = eventTap
-        eventTapLock.unlock()
-
-        guard let tap else {
+        let openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        guard openResult == kIOReturnSuccess else {
+            IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+            IOHIDManagerRegisterInputValueCallback(manager, nil, nil)
+            hidRetainedSelf?.release()
+            hidRetainedSelf = nil
+            DiagnosticLogger.log("KeyboardMonitor.start failed; IOHIDManagerOpen result=\(openResult)")
             return
         }
 
-        CGEvent.tapEnable(tap: tap, enable: true)
-        DiagnosticLogger.log("KeyboardMonitor re-enabled event tap")
+        hidManager = manager
+        DiagnosticLogger.log("KeyboardMonitor.start created HID monitor")
     }
 
-    private func handle(type: CGEventType, event: CGEvent) -> Bool {
-        guard type == .flagsChanged else {
-            return false
+    private func stopHIDMonitor() {
+        guard let hidManager else {
+            return
         }
 
-        let hasFunctionFlag = event.flags.contains(.maskSecondaryFn)
-        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-        DiagnosticLogger.log("flagsChanged keyCode=\(keyCode) flags=\(event.flags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
+        IOHIDManagerRegisterInputValueCallback(hidManager, nil, nil)
+        IOHIDManagerUnscheduleFromRunLoop(hidManager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        IOHIDManagerClose(hidManager, IOOptionBits(kIOHIDOptionsTypeNone))
+        self.hidManager = nil
+        hidRetainedSelf?.release()
+        hidRetainedSelf = nil
+    }
 
-        guard hasFunctionFlag != isFunctionKeyPressed else {
-            return false
+    private func handleHIDValue(_ value: IOHIDValue) {
+        let element = IOHIDValueGetElement(value)
+        let usagePage = IOHIDElementGetUsagePage(element)
+        let usage = IOHIDElementGetUsage(element)
+        guard usagePage == 0xff, usage == 0x3 else {
+            return
         }
 
-        isFunctionKeyPressed = hasFunctionFlag
+        let isPressed = IOHIDValueGetIntegerValue(value) != 0
+        guard isPressed != isFunctionKeyPressed else {
+            return
+        }
 
-        let now = Date()
-        let input: GlobePressInterpreter.Input = hasFunctionFlag ? .keyDown(now) : .keyUp(now)
-        DiagnosticLogger.log("KeyboardMonitor interpreted \(hasFunctionFlag ? "keyDown" : "keyUp")")
+        isFunctionKeyPressed = isPressed
+
+        let input: GlobePressInterpreter.Input = isPressed ? .keyDown(Date()) : .keyUp(Date())
+        DiagnosticLogger.log("KeyboardMonitor interpreted HID Fn \(isPressed ? "keyDown" : "keyUp")")
         let handler = handler
 
-        DispatchQueue.main.async {
-            MainActor.assumeIsolated {
-                handler(.press(input))
-            }
+        Task { @MainActor in
+            handler(.press(input))
         }
+    }
 
-        return true
+    private static func hidMatchingDictionary(usagePage: Int, usage: Int) -> CFDictionary {
+        [
+            kIOHIDDeviceUsagePageKey: usagePage,
+            kIOHIDDeviceUsageKey: usage
+        ] as CFDictionary
     }
     #endif
 

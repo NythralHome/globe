@@ -174,9 +174,9 @@ struct OnboardingView: View {
             )
             #else
             statusPill(
-                title: model.accessibilityTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
-                systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle",
-                color: model.accessibilityTrusted ? .green : .orange
+                title: model.inputMonitoringTrusted ? "Input Monitoring enabled" : "Input Monitoring needed",
+                systemImage: model.inputMonitoringTrusted ? "checkmark.circle.fill" : "exclamationmark.circle",
+                color: model.inputMonitoringTrusted ? .green : .orange
             )
             #endif
         }
@@ -279,7 +279,7 @@ struct OnboardingView: View {
                     step += 1
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(steps[step].kind == .permissions && !model.accessibilityTrusted)
+                .disabled(steps[step].kind == .permissions && !model.inputMonitoringTrusted)
             } else {
                 Button("Start Using Globe") {
                     model.completeOnboarding()
@@ -300,19 +300,19 @@ struct OnboardingView: View {
         #else
         VStack(alignment: .leading, spacing: 14) {
             Label(
-                model.accessibilityTrusted ? "Fn/Globe monitoring is ready." : "Input Monitoring is required to detect Globe/Fn.",
-                systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "lock.open"
+                model.inputMonitoringTrusted ? "Fn/Globe monitoring is ready." : "Input Monitoring is required to detect Globe/Fn.",
+                systemImage: model.inputMonitoringTrusted ? "checkmark.circle.fill" : "lock.open"
             )
             .font(.callout)
-            .foregroundStyle(model.accessibilityTrusted ? .green : .secondary)
+            .foregroundStyle(model.inputMonitoringTrusted ? .green : .secondary)
 
-            if model.accessibilityTrusted {
+            if model.inputMonitoringTrusted {
                 Text("Input Monitoring is enabled. Globe can now receive the global Fn/Globe events used for switching outside Globe focus.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
                 Button("Request Input Monitoring") {
-                    model.beginAccessibilitySetup()
+                    model.beginInputMonitoringSetup()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

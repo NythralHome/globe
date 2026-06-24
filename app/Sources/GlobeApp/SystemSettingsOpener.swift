@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 enum SystemSettingsOpener {
-    static func openAccessibility() {
+    static func openInputMonitoring() {
         open("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
     }
 

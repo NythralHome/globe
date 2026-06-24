@@ -19,13 +19,13 @@ struct GlobeMenu: View {
             model.showOnboarding()
         }
 
-        Button(AppDistribution.isAppStore ? "Open App Store Updates" : "Check for Updates") {
+        Button(AppDistribution.usesInAppUpdates ? "Check for Updates" : "Open App Store Updates") {
             model.checkForUpdates()
         }
 
         #if !GLOBE_APP_STORE
         Button("Request Input Monitoring") {
-            model.beginAccessibilitySetup()
+            model.beginInputMonitoringSetup()
         }
         #endif
 
