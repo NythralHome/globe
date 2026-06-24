@@ -12,12 +12,25 @@ DIST_DIR="$BUILD_DIR/dist"
 COMPONENT_PKG="$BUILD_DIR/pkg/Globe-component-$VERSION.pkg"
 PKG_PATH="$DIST_DIR/Globe-$VERSION.pkg"
 SCRIPTS_DIR="$BUILD_DIR/pkg/scripts"
+STAGING_ROOT="$BUILD_DIR/pkg/root"
+STAGED_APP="$STAGING_ROOT/Applications/Globe.app"
+COMPONENT_PLIST="$BUILD_DIR/pkg/components.plist"
 INSTALLER_IDENTITY="${GLOBE_INSTALLER_SIGN_IDENTITY:-}"
 
 "$SCRIPT_DIR/build-app-bundle.sh" >/dev/null
 
 rm -rf "$BUILD_DIR/pkg" "$PKG_PATH"
-mkdir -p "$SCRIPTS_DIR" "$DIST_DIR"
+mkdir -p "$SCRIPTS_DIR" "$DIST_DIR" "$(dirname "$STAGED_APP")"
+
+dot_clean "$BUNDLE_DIR" >/dev/null 2>&1 || true
+xattr -cr "$BUNDLE_DIR" >/dev/null 2>&1 || true
+find "$BUNDLE_DIR" -name '._*' -delete
+ditto --norsrc --noextattr "$BUNDLE_DIR" "$STAGED_APP"
+dot_clean "$STAGING_ROOT" >/dev/null 2>&1 || true
+xattr -cr "$STAGING_ROOT" >/dev/null 2>&1 || true
+find "$STAGING_ROOT" -name '._*' -delete
+pkgbuild --analyze --root "$STAGING_ROOT" "$COMPONENT_PLIST" >/dev/null
+/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$COMPONENT_PLIST"
 
 cat > "$SCRIPTS_DIR/postinstall" <<'SCRIPT'
 #!/bin/sh
@@ -41,9 +54,10 @@ exit 0
 SCRIPT
 chmod 755 "$SCRIPTS_DIR/postinstall"
 
-pkgbuild \
-  --component "$BUNDLE_DIR" \
-  --install-location /Applications \
+COPYFILE_DISABLE=1 pkgbuild \
+  --root "$STAGING_ROOT" \
+  --component-plist "$COMPONENT_PLIST" \
+  --install-location / \
   --identifier dev.nythral.globe \
   --version "$VERSION" \
   --scripts "$SCRIPTS_DIR" \
@@ -57,7 +71,7 @@ if [[ -n "$INSTALLER_IDENTITY" ]]; then
   productbuild_args+=(--sign "$INSTALLER_IDENTITY")
 fi
 
-productbuild "${productbuild_args[@]}" "$PKG_PATH" >/dev/null
+COPYFILE_DISABLE=1 productbuild "${productbuild_args[@]}" "$PKG_PATH" >/dev/null
 
 if [[ "${GLOBE_NOTARIZE:-0}" == "1" ]]; then
   if [[ -z "${GLOBE_NOTARY_PROFILE:-}" ]]; then

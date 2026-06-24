@@ -9,8 +9,8 @@ VERSION="${GLOBE_VERSION:-$GLOBE_DEFAULT_APPSTORE_VERSION}"
 BUILD_NUMBER="${GLOBE_BUILD:-$GLOBE_DEFAULT_APPSTORE_BUILD}"
 DIST_DIR="$APP_DIR/.build/app-store"
 PKG_PATH="$DIST_DIR/Globe-$VERSION-$BUILD_NUMBER-mas.pkg"
-STAGING_DIR="${TMPDIR:-/tmp}/globe-mas-package"
-STAGED_APP="$STAGING_DIR/Globe.app"
+STAGING_ROOT="${TMPDIR:-/tmp}/globe-mas-package-root"
+STAGED_APP="$STAGING_ROOT/Globe.app"
 PROVISIONING_PROFILE="${GLOBE_PROVISIONING_PROFILE:-$APP_DIR/../signing-private/Globe-Mac-App-Store-2026.mobileprovision}"
 
 profile_value() {
@@ -73,13 +73,15 @@ APP_BUNDLE="$(
 )"
 
 rm -f "$PKG_PATH"
-rm -rf "$STAGING_DIR"
-mkdir -p "$STAGING_DIR"
+rm -rf "$STAGING_ROOT"
+mkdir -p "$(dirname "$STAGED_APP")"
 ditto --norsrc --noextattr "$APP_BUNDLE" "$STAGED_APP"
 APP_BUNDLE="$STAGED_APP"
 
-dot_clean "$APP_BUNDLE" >/dev/null 2>&1 || true
-xattr -cr "$APP_BUNDLE" >/dev/null 2>&1 || true
+dot_clean "$STAGING_ROOT" >/dev/null 2>&1 || true
+xattr -cr "$STAGING_ROOT" >/dev/null 2>&1 || true
+
+find "$STAGING_ROOT" -name '._*' -delete
 
 COPYFILE_DISABLE=1 productbuild \
     --component "$APP_BUNDLE" /Applications \
