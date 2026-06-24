@@ -474,7 +474,7 @@ final class GlobeModel: ObservableObject {
         #if GLOBE_APP_STORE
         keyboardMonitor.start()
         #else
-        keyboardMonitor.start(enableEventTap: accessibilityTrusted)
+        keyboardMonitor.start(enableEventTap: true)
         #endif
     }
 
