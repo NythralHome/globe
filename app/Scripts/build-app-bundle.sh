@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="${GLOBE_VERSION:-0.1.0-beta.21}"
+VERSION="${GLOBE_VERSION:-0.1.0-beta.22}"
 BUILD_NUMBER="${GLOBE_BUILD:-1}"
 DISPLAY_NAME="${GLOBE_DISPLAY_NAME:-Globe}"
 DISTRIBUTION="${GLOBE_DISTRIBUTION:-developer-id}"
