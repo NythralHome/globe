@@ -20,6 +20,9 @@ final class KeyboardMonitor: @unchecked Sendable {
     #else
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var eventTapRunLoop: CFRunLoop?
+    private var eventTapThread: Thread?
+    private let eventTapLock = NSLock()
     #endif
     private var isFunctionKeyPressed = false
     private let handler: @MainActor (KeyboardTrigger) -> Void
@@ -136,11 +139,34 @@ final class KeyboardMonitor: @unchecked Sendable {
 
     #if !GLOBE_APP_STORE
     private func startEventTap() {
-        guard eventTap == nil else {
+        eventTapLock.lock()
+        let isAlreadyStarted = eventTapThread != nil || eventTap != nil
+        eventTapLock.unlock()
+
+        guard !isAlreadyStarted else {
             DiagnosticLogger.log("KeyboardMonitor.start ignored; event tap already exists")
             return
         }
 
+        DiagnosticLogger.log("KeyboardMonitor.start event tap thread")
+        let ready = DispatchSemaphore(value: 0)
+        let thread = Thread { [weak self] in
+            self?.runEventTapThread(ready: ready)
+        }
+        thread.name = "Globe HID Event Tap"
+
+        eventTapLock.lock()
+        eventTapThread = thread
+        eventTapLock.unlock()
+
+        thread.start()
+
+        if ready.wait(timeout: .now() + 1.0) == .timedOut {
+            DiagnosticLogger.log("KeyboardMonitor.start event tap thread did not report ready within 1s")
+        }
+    }
+
+    private func runEventTapThread(ready: DispatchSemaphore) {
         DiagnosticLogger.log("KeyboardMonitor.start")
         let mask = (1 << CGEventType.flagsChanged.rawValue)
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
@@ -172,39 +198,87 @@ final class KeyboardMonitor: @unchecked Sendable {
             userInfo: refcon
         ) else {
             DiagnosticLogger.log("KeyboardMonitor.start failed; CGEvent.tapCreate returned nil")
+            eventTapLock.lock()
+            eventTapThread = nil
+            eventTapLock.unlock()
+            ready.signal()
             return
         }
 
-        eventTap = tap
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        let currentRunLoop = CFRunLoopGetCurrent()
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
 
-        if let runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        eventTapLock.lock()
+        eventTap = tap
+        runLoopSource = source
+        eventTapRunLoop = currentRunLoop
+        eventTapLock.unlock()
+
+        if let source {
+            CFRunLoopAddSource(currentRunLoop, source, .commonModes)
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
         DiagnosticLogger.log("KeyboardMonitor.start created HID event tap")
+        ready.signal()
+
+        CFRunLoopRun()
     }
 
     private func stopEventTap() {
-        if let runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-        }
+        eventTapLock.lock()
+        let runLoop = eventTapRunLoop
+        let source = runLoopSource
+        let tap = eventTap
+        eventTapLock.unlock()
 
-        if let eventTap {
-            CGEvent.tapEnable(tap: eventTap, enable: false)
-        }
-
-        runLoopSource = nil
-        eventTap = nil
-    }
-
-    private func enableEventTap() {
-        guard let eventTap else {
+        guard let runLoop else {
+            eventTapLock.lock()
+            runLoopSource = nil
+            eventTap = nil
+            eventTapThread = nil
+            eventTapLock.unlock()
             return
         }
 
-        CGEvent.tapEnable(tap: eventTap, enable: true)
+        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) { [weak self] in
+            if let source {
+                CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+            }
+
+            if let tap {
+                CGEvent.tapEnable(tap: tap, enable: false)
+                CFMachPortInvalidate(tap)
+            }
+
+            guard let self else {
+                CFRunLoopStop(CFRunLoopGetCurrent())
+                return
+            }
+
+            self.eventTapLock.lock()
+            self.runLoopSource = nil
+            self.eventTap = nil
+            self.eventTapRunLoop = nil
+            self.eventTapThread = nil
+            self.eventTapLock.unlock()
+
+            CFRunLoopStop(CFRunLoopGetCurrent())
+        }
+
+        CFRunLoopWakeUp(runLoop)
+    }
+
+    private func enableEventTap() {
+        eventTapLock.lock()
+        let tap = eventTap
+        eventTapLock.unlock()
+
+        guard let tap else {
+            return
+        }
+
+        CGEvent.tapEnable(tap: tap, enable: true)
         DiagnosticLogger.log("KeyboardMonitor re-enabled event tap")
     }
 
