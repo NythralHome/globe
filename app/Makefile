@@ -22,9 +22,9 @@ export GLOBE_CODESIGN_IDENTITY
 ## check: compile both channels (no signing). The fast local/CI gate.
 check:
 	@echo "==> Compiling direct (Developer ID) flavor"
-	swift build -c release
+	swift build -c release --arch arm64 --arch x86_64
 	@echo "==> Compiling App Store flavor (-DGLOBE_APP_STORE)"
-	swift build -c release -Xswiftc -DGLOBE_APP_STORE
+	swift build -c release --arch arm64 --arch x86_64 -Xswiftc -DGLOBE_APP_STORE
 	@echo "==> Both flavors compile."
 
 ## test: run the unit tests.

@@ -18,6 +18,7 @@ SIGN_IDENTITY="${GLOBE_CODESIGN_IDENTITY:--}"
 PROVISIONING_PROFILE="${GLOBE_PROVISIONING_PROFILE:-}"
 ENTITLEMENTS=()
 SWIFT_FLAGS=()
+SWIFT_ARCHS=(${GLOBE_ARCHS:-arm64 x86_64})
 
 extract_profile_value() {
     local profile_plist="$1"
@@ -100,6 +101,9 @@ fi
 
 cd "$APP_DIR"
 SWIFT_BUILD_COMMAND=(swift build -c release)
+for arch in "${SWIFT_ARCHS[@]}"; do
+    SWIFT_BUILD_COMMAND+=(--arch "$arch")
+done
 if [[ ${#SWIFT_FLAGS[@]} -gt 0 ]]; then
     SWIFT_BUILD_COMMAND+=("${SWIFT_FLAGS[@]}")
 fi
@@ -109,7 +113,7 @@ fi
 rm -rf "$BUNDLE_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
-cp "$APP_DIR/.build/release/Globe" "$MACOS_DIR/Globe"
+cp "$APP_DIR/.build/apple/Products/Release/Globe" "$MACOS_DIR/Globe"
 cp "$APP_DIR/.build/assets/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
 if [[ -n "$PROVISIONING_PROFILE" ]]; then
