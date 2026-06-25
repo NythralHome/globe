@@ -1,6 +1,6 @@
-# Globe
+# Nythral Globe
 
-Source-available macOS utility for predictable Globe/Fn input source switching.
+Open-source macOS utility for predictable Globe/Fn input source switching.
 
 Globe is a native menu bar app for people who type in multiple languages every day. Instead of cycling through input sources, Globe lets you map direct actions:
 
@@ -24,30 +24,29 @@ Globe is a native menu bar app for people who type in multiple languages every d
 
 ## Status
 
-Globe is in public beta for macOS 14 or newer. The installer is signed with Developer ID, notarized by Apple, and distributed through GitHub Releases.
+Nythral Globe is in public beta for macOS 14 or newer. The installer is signed with Developer ID, notarized by Apple, and distributed through GitHub Releases.
 
 Current beta capabilities:
 
 - Native macOS menu bar app.
 - Signed PKG installer that launches Globe after installation.
 - Guided first-run setup.
-- Launch at login.
-- Accessibility permission helper.
+- Optional startup after signing in to macOS.
+- Input Monitoring permission helper.
 - Single, double, triple, and long Globe/Fn press actions.
 - Optional switching HUD.
 - Manual GitHub release update checks.
 - Direct update installer download.
-- Exportable diagnostics for bug reports.
 
 ## Install
 
 1. Download the latest beta from [globe.nythral.com](https://globe.nythral.com).
 2. Open the signed `Globe-*.pkg` installer.
 3. Complete the welcome setup.
-4. Add Globe to Accessibility when macOS asks for permission.
+4. Add Globe to Input Monitoring when macOS asks for permission.
 5. Set `Press Globe key to` to `Do Nothing` in System Settings > Keyboard.
 
-macOS requires the Accessibility and Keyboard steps. Globe does not use private Apple APIs to change those settings silently.
+macOS requires the Input Monitoring and Keyboard steps. Globe does not use private Apple APIs to change those settings silently.
 
 ## Updates
 
@@ -59,19 +58,7 @@ Globe does not record, store, or transmit typed text.
 
 The app only observes Globe/Fn key state changes and macOS input source metadata needed to switch input sources. Diagnostic logs include setup state, permission state, input source names/IDs, and Globe/Fn key events. They do not include typed text.
 
-## Diagnostics
-
-When reporting a bug, use `Export Diagnostics` from the Globe menu bar item or Settings > About. The exported text file includes:
-
-- Globe version.
-- macOS version.
-- Accessibility status.
-- Current input source.
-- Installed input sources.
-- Globe settings and key mapping.
-- Recent Globe log lines.
-
-Diagnostic logs are also written locally to:
+Diagnostic logs are written locally to:
 
 ```text
 ~/Library/Logs/Globe/Globe.log
@@ -83,14 +70,14 @@ Diagnostic logs are also written locally to:
 
 - Confirm Globe is running in the menu bar.
 - Open Settings > Permissions.
-- Confirm Accessibility is enabled.
+- Confirm Input Monitoring is enabled.
 - Use `Test Globe key` to verify Globe can observe Globe/Fn.
 - Confirm System Settings > Keyboard > `Press Globe key to` is set to `Do Nothing`.
 
-### Globe does not appear in Accessibility
+### Globe does not appear in Input Monitoring
 
 - Install Globe into `/Applications`.
-- Open System Settings > Privacy & Security > Accessibility.
+- Open System Settings > Privacy & Security > Input Monitoring.
 - Use the `+` button and select `/Applications/Globe.app`.
 - Relaunch Globe.
 
@@ -137,8 +124,12 @@ app/Scripts/package-pkg.sh
 
 ## Contributing
 
-Issues and pull requests are welcome. For behavior bugs, include exported diagnostics when possible. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-PolyForm Noncommercial License 1.0.0. Personal and other noncommercial use is permitted; commercial resale or commercial use requires separate permission from Nythral. See [LICENSE](LICENSE).
+GNU General Public License version 3. See [LICENSE](LICENSE).
+
+The GPL covers the source code. Nythral names, logos, icons, website design,
+App Store listing, and other brand assets are not licensed for use in forks.
+See [TRADEMARKS.md](TRADEMARKS.md).

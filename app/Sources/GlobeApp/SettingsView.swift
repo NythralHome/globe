@@ -382,11 +382,11 @@ struct SettingsView: View {
                         .background(.blue, in: RoundedRectangle(cornerRadius: 14))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Globe")
+                        Text("Nythral Globe")
                             .font(.title2.weight(.semibold))
                         Text("Version \(AppVersion.displayString)")
                             .foregroundStyle(.secondary)
-                        Text("Source-available macOS utility under the PolyForm Noncommercial License 1.0.0.")
+                        Text("Open-source macOS utility under the GNU GPLv3.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }

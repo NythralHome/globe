@@ -11,9 +11,9 @@
 #     build number must strictly increase with every upload to App Store Connect.
 
 # Direct / Developer ID channel.
-GLOBE_DEFAULT_VERSION="0.1.0-beta.27"
+GLOBE_DEFAULT_VERSION="0.1.0-beta.28"
 GLOBE_DEFAULT_BUILD="1"
 
 # App Store channel.
 GLOBE_DEFAULT_APPSTORE_VERSION="0.1.0"
-GLOBE_DEFAULT_APPSTORE_BUILD="45"
+GLOBE_DEFAULT_APPSTORE_BUILD="46"
