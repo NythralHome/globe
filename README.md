@@ -1,6 +1,6 @@
 # Globe
 
-Open-source macOS utility for predictable Globe/Fn input source switching.
+Source-available macOS utility for predictable Globe/Fn input source switching.
 
 Globe is a native menu bar app for people who type in multiple languages every day. Instead of cycling through input sources, Globe lets you map direct actions:
 
@@ -141,4 +141,4 @@ Issues and pull requests are welcome. For behavior bugs, include exported diagno
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+PolyForm Noncommercial License 1.0.0. Personal and other noncommercial use is permitted; commercial resale or commercial use requires separate permission from Nythral. See [LICENSE](LICENSE).

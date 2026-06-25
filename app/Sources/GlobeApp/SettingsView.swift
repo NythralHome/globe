@@ -386,7 +386,7 @@ struct SettingsView: View {
                             .font(.title2.weight(.semibold))
                         Text("Version \(AppVersion.displayString)")
                             .foregroundStyle(.secondary)
-                        Text("Open-source macOS utility under the MIT License.")
+                        Text("Source-available macOS utility under the PolyForm Noncommercial License 1.0.0.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
