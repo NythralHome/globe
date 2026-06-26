@@ -6,10 +6,8 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var model: GlobeModel
     @State private var selectedTab: SettingsTab = .general
-    #if GLOBE_APP_STORE
     @State private var recordingShortcut: RecordingShortcutTarget?
     @State private var shortcutMonitor: Any?
-    #endif
 
     var body: some View {
         HStack(spacing: 0) {
@@ -33,11 +31,9 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refreshSystemState()
         }
-        #if GLOBE_APP_STORE
         .onDisappear {
             stopRecordingShortcut()
         }
-        #endif
     }
 
     private var sidebar: some View {
@@ -491,14 +487,15 @@ struct SettingsView: View {
     ) -> some View {
         HStack(spacing: 12) {
             Text(title)
+                .lineLimit(1)
             Spacer()
-            #if GLOBE_APP_STORE
+
             Text(recordingShortcut == target ? "Press new shortcut..." : value)
                 .foregroundStyle(recordingShortcut == target ? .blue : .secondary)
                 .lineLimit(1)
-                .frame(maxWidth: 190, alignment: .trailing)
+                .frame(minWidth: 150, idealWidth: 180, alignment: .trailing)
 
-            Button(recordingShortcut == target ? "Cancel" : "Change") {
+            Button(recordingShortcut == target ? "Cancel" : canClear ? "Change" : "Set") {
                 if recordingShortcut == target {
                     stopRecordingShortcut()
                 } else {
@@ -511,17 +508,10 @@ struct SettingsView: View {
                     clearShortcut(target)
                 }
             }
-            #else
-            Text(value)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .frame(maxWidth: 190, alignment: .trailing)
-            #endif
         }
         .font(.system(size: 15))
     }
 
-    #if GLOBE_APP_STORE
     private func startRecordingShortcut(_ target: RecordingShortcutTarget) {
         stopRecordingShortcut()
         recordingShortcut = target
@@ -666,7 +656,6 @@ struct SettingsView: View {
 
         return event.charactersIgnoringModifiers?.uppercased()
     }
-    #endif
 
     private var longPressBinding: Binding<CodableGlobePressAction> {
         Binding(
