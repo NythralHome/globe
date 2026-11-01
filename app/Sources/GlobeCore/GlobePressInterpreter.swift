@@ -18,6 +18,12 @@ public final class GlobePressInterpreter {
         case keyDown(Date)
         case keyUp(Date)
         case timer(Date)
+        /// Something other than the Globe key happened: another key was
+        /// pressed or released, another modifier changed, a media key fired.
+        /// A chord like Globe+arrow (Home) must not count as a press, and
+        /// typing during the wait between presses must not let the layout
+        /// switch under the next characters.
+        case cancel(Date)
     }
 
     public enum Action: Equatable, Sendable {
@@ -32,6 +38,11 @@ public final class GlobePressInterpreter {
     private var pressCount = 0
     private var deadline: Date?
 
+    /// True while a press is down or a finished press waits for company.
+    public var isPending: Bool {
+        keyDownDate != nil || deadline != nil
+    }
+
     public init(timing: GlobePressTiming = GlobePressTiming()) {
         self.timing = timing
     }
@@ -45,6 +56,8 @@ public final class GlobePressInterpreter {
             return handleKeyUp(at: date)
         case let .timer(date):
             return handleTimer(at: date)
+        case let .cancel(date):
+            return handleCancel(at: date)
         }
     }
 
@@ -103,6 +116,14 @@ public final class GlobePressInterpreter {
         }
 
         return finalizePendingPresses()
+    }
+
+    private func handleCancel(at date: Date) -> [Action] {
+        if keyDownDate != nil || deadline != nil {
+            reset()
+        }
+
+        return []
     }
 
     private func finalizePendingPresses() -> [Action] {

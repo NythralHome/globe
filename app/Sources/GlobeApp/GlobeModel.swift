@@ -375,6 +375,9 @@ final class GlobeModel: ObservableObject {
             schedulePendingPressTimeout()
         case .timer:
             break
+        case .cancel:
+            // Cancellations arrive through handleCancellation.
+            break
         }
     }
 
@@ -382,9 +385,24 @@ final class GlobeModel: ObservableObject {
         switch trigger {
         case let .press(input):
             handlePressInput(input)
+        case .cancel:
+            handleCancellation()
         case let .inputSource(id):
             switchDirectlyToInputSource(id: id, fixingSelectedText: true)
         }
+    }
+
+    /// Drops the pending press count without touching the test UI: a chord
+    /// (Globe+arrow) or typing during the multi-press window must not switch
+    /// the layout. Nothing is logged unless something was actually pending,
+    /// so ordinary typing stays silent.
+    private func handleCancellation() {
+        guard pressInterpreter.isPending else {
+            return
+        }
+
+        DiagnosticLogger.log("handleCancellation cleared pending presses")
+        pressInterpreter.handle(.cancel(Date()))
     }
 
     private func perform(_ action: GlobePressAction) {
@@ -457,6 +475,9 @@ final class GlobeModel: ObservableObject {
             lastGlobeKeyTestEvent = "Detected Globe/Fn up at \(formatter.string(from: date))."
             #endif
         case .timer:
+            break
+        case .cancel:
+            // Cancellations arrive through handleCancellation.
             break
         }
     }
