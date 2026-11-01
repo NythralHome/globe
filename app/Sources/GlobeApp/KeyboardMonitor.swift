@@ -6,6 +6,11 @@ import Carbon.HIToolbox
 
 enum KeyboardTrigger: Sendable {
     case press(GlobePressInterpreter.Input)
+    /// Something other than a clean Globe press happened: another key or a
+    /// media key while Globe is down (a chord such as Globe+arrow), or typing
+    /// during the wait between presses. The interpreter drops its pending
+    /// count instead of switching the layout.
+    case cancel
     case inputSource(id: String)
 }
 
@@ -25,6 +30,10 @@ final class KeyboardMonitor: @unchecked Sendable {
     private let eventTapLock = NSLock()
     #endif
     private var isFunctionKeyPressed = false
+    /// The press in progress started as a chord (Globe held together with
+    /// another key, modifier or a media key), so its release must not reach
+    /// the interpreter as a key up.
+    private var chordedPress = false
     private let handler: @MainActor (KeyboardTrigger) -> Void
 
     init(handler: @escaping @MainActor (KeyboardTrigger) -> Void) {
@@ -58,6 +67,8 @@ final class KeyboardMonitor: @unchecked Sendable {
         #if !GLOBE_APP_STORE
         stopEventTap()
         #endif
+        isFunctionKeyPressed = false
+        chordedPress = false
     }
 
     private func startHotKeys() {
@@ -168,7 +179,13 @@ final class KeyboardMonitor: @unchecked Sendable {
 
     private func runEventTapThread(ready: DispatchSemaphore) {
         DiagnosticLogger.log("KeyboardMonitor.start")
-        let mask = (1 << CGEventType.flagsChanged.rawValue)
+        // Beyond the fn flag transitions, the tap watches other key activity
+        // so chords and typing can cancel a pending press. It stays
+        // listen-only: no event is ever swallowed.
+        var mask = (1 << CGEventType.flagsChanged.rawValue)
+        mask |= (1 << CGEventType.keyDown.rawValue)
+        mask |= (1 << CGEventType.keyUp.rawValue)
+        mask |= (1 << Self.systemDefinedEventType)
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
             if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                 if let refcon {
@@ -283,37 +300,110 @@ final class KeyboardMonitor: @unchecked Sendable {
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Bool {
-        guard type == .flagsChanged else {
+        guard let trigger = keyboardTrigger(for: type, event: event) else {
             return false
         }
 
-        let hasFunctionFlag = event.flags.contains(.maskSecondaryFn)
-        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-        DiagnosticLogger.log("flagsChanged keyCode=\(keyCode) flags=\(event.flags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
-
-        guard hasFunctionFlag != isFunctionKeyPressed else {
-            return false
-        }
-
-        isFunctionKeyPressed = hasFunctionFlag
-
-        let now = Date()
-        let input: GlobePressInterpreter.Input = hasFunctionFlag ? .keyDown(now) : .keyUp(now)
-        DiagnosticLogger.log("KeyboardMonitor interpreted \(hasFunctionFlag ? "keyDown" : "keyUp")")
         let handler = handler
-
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                handler(.press(input))
+                handler(trigger)
             }
         }
 
         return true
     }
+
+    /// Reduces one tap event to the trigger it means for the interpreter, or
+    /// nil when the event cannot affect a gesture. The tap never swallows
+    /// anything: chords and typing merely cancel pending presses instead of
+    /// counting as them.
+    private func keyboardTrigger(for type: CGEventType, event: CGEvent) -> KeyboardTrigger? {
+        switch type {
+        case .flagsChanged:
+            return flagsChangedTrigger(event)
+        case .keyDown, .keyUp:
+            // Releasing the Globe key makes macOS synthesize a keyDown/keyUp
+            // pair with the Globe key's own keycode in the same millisecond
+            // as the flagsChanged that reports the release. It is an echo of
+            // the press just counted, not typing; feeding it onward would
+            // cancel every finished press before it can fire.
+            guard event.getIntegerValueField(.keyboardEventKeycode) != Self.syntheticGlobeKeycode else {
+                return nil
+            }
+            return otherKeyEventTrigger()
+        default:
+            guard type.rawValue == Self.systemDefinedEventType else {
+                return nil
+            }
+            return otherKeyEventTrigger()
+        }
+    }
+
+    private func flagsChangedTrigger(_ event: CGEvent) -> KeyboardTrigger? {
+        let hasFunctionFlag = event.flags.contains(.maskSecondaryFn)
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        DiagnosticLogger.log("flagsChanged keyCode=\(keyCode) flags=\(event.flags.rawValue) hasFunctionFlag=\(hasFunctionFlag)")
+
+        guard hasFunctionFlag != isFunctionKeyPressed else {
+            // Another modifier changed while the Globe key sits still: a
+            // hold that now carries a modifier is a chord, not a gesture.
+            if isFunctionKeyPressed {
+                chordedPress = true
+                return .cancel
+            }
+            return nil
+        }
+
+        isFunctionKeyPressed = hasFunctionFlag
+
+        if hasFunctionFlag {
+            // A press that starts with a real modifier held (Cmd+Globe,
+            // Ctrl+Globe) is a shortcut chord, not a gesture.
+            let hasPrimaryModifier = event.flags.contains(.maskCommand)
+                || event.flags.contains(.maskControl)
+                || event.flags.contains(.maskAlternate)
+                || event.flags.contains(.maskShift)
+            if hasPrimaryModifier {
+                chordedPress = true
+                return .cancel
+            }
+
+            chordedPress = false
+            DiagnosticLogger.log("KeyboardMonitor interpreted keyDown")
+            return .press(.keyDown(Date()))
+        }
+
+        if chordedPress {
+            chordedPress = false
+            DiagnosticLogger.log("KeyboardMonitor chord canceled press")
+            return .cancel
+        }
+
+        DiagnosticLogger.log("KeyboardMonitor interpreted keyUp")
+        return .press(.keyUp(Date()))
+    }
+
+    /// Any other key or media-key activity. While the Globe key is down this
+    /// turns the hold into a chord (Globe+arrow for Home/End, Globe+brightness);
+    /// while it is up, it is typing during the wait between presses.
+    private func otherKeyEventTrigger() -> KeyboardTrigger {
+        if isFunctionKeyPressed {
+            chordedPress = true
+        }
+        return .cancel
+    }
     #endif
 
     private static let hotKeySignature = OSType(0x474C4245)
     private static let actionHotKeyID: UInt32 = 1
+
+    /// NSSystemDefined has no CGEventType case in Swift; media and brightness
+    /// keys arrive as these events.
+    private static let systemDefinedEventType: UInt32 = 14
+    /// The keycode macOS synthesizes as a keyDown/keyUp pair when the Globe
+    /// key comes back up (kVK_NX_KeyType).
+    private static let syntheticGlobeKeycode: Int64 = 179
 
     private func registerAppStoreHotKeys(target: EventTargetRef?) {
         register(
