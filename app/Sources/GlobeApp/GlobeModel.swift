@@ -375,6 +375,9 @@ final class GlobeModel: ObservableObject {
             schedulePendingPressTimeout()
         case .timer:
             break
+        case .cancel:
+            // Cancellations arrive through handleCancellation.
+            break
         }
     }
 
@@ -472,6 +475,9 @@ final class GlobeModel: ObservableObject {
             lastGlobeKeyTestEvent = "Detected Globe/Fn up at \(formatter.string(from: date))."
             #endif
         case .timer:
+            break
+        case .cancel:
+            // Cancellations arrive through handleCancellation.
             break
         }
     }
